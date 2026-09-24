@@ -1,0 +1,109 @@
+@let e = escala();
+@let ultimo = puntos().at(-1)!;
+
+<div class="relative">
+  <svg
+    [attr.width]="ancho()"
+    [attr.height]="alto"
+    class="block touch-none rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40"
+    tabindex="0"
+    role="img"
+    [attr.aria-label]="resumen()"
+    (pointermove)="alMover($event)"
+    (pointerleave)="indiceActivo.set(null)"
+    (focus)="indiceActivo.set(tasas().length - 1)"
+    (blur)="indiceActivo.set(null)"
+    (keydown)="alPresionarTecla($event)"
+  >
+    <!-- Líneas guía y valores del eje Y -->
+    @for (marca of e.marcas; track marca) {
+      <line
+        [attr.x1]="e.x0"
+        [attr.x2]="e.x1"
+        [attr.y1]="e.y(marca)"
+        [attr.y2]="e.y(marca)"
+        class="stroke-gray-200"
+        stroke-width="1"
+      />
+      <text
+        [attr.x]="e.x0 - 10"
+        [attr.y]="e.y(marca)"
+        text-anchor="end"
+        dominant-baseline="middle"
+        class="fill-gray-500 text-xs"
+      >
+        {{ formatear(marca, e.decimales) }}
+      </text>
+    }
+
+    <!-- Fechas del eje X -->
+    @for (etiqueta of etiquetasX(); track $index) {
+      <text
+        [attr.x]="etiqueta.x"
+        [attr.y]="alto - 8"
+        [attr.text-anchor]="etiqueta.ancla"
+        class="fill-gray-500 text-xs"
+      >
+        {{ etiqueta.texto }}
+      </text>
+    }
+
+    <!-- Área y línea -->
+    <path [attr.d]="area()" class="fill-green-600/10" />
+    <path
+      [attr.d]="linea()"
+      fill="none"
+      class="stroke-green-600"
+      stroke-width="2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+
+    <!-- Punto y valor final -->
+    <circle
+      [attr.cx]="ultimo.x"
+      [attr.cy]="ultimo.y"
+      r="4"
+      class="fill-green-600 stroke-white"
+      stroke-width="2"
+    />
+    <text
+      [attr.x]="ultimo.x + 10"
+      [attr.y]="ultimo.y"
+      dominant-baseline="middle"
+      class="fill-gray-900 text-xs font-semibold"
+    >
+      {{ formatear(tasas().at(-1)!.rate) }}
+    </text>
+
+    <!-- Cursor -->
+    @if (activo(); as a) {
+      <line
+        [attr.x1]="a.punto.x"
+        [attr.x2]="a.punto.x"
+        [attr.y1]="16"
+        [attr.y2]="e.y0"
+        class="stroke-gray-400"
+        stroke-width="1"
+      />
+      <circle
+        [attr.cx]="a.punto.x"
+        [attr.cy]="a.punto.y"
+        r="5"
+        class="fill-green-600 stroke-white"
+        stroke-width="2"
+      />
+    }
+  </svg>
+
+  <!-- Tooltip -->
+  @if (activo(); as a) {
+    <div
+      class="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md bg-gray-900 px-3 py-2 text-center shadow-lg"
+      [style.left.px]="a.izquierda"
+    >
+      <p class="text-sm font-bold text-white">{{ formatear(a.tasa.rate) }} {{ a.tasa.quote }}</p>
+      <p class="text-xs text-gray-400">{{ a.fecha }}</p>
+    </div>
+  }
+</div>

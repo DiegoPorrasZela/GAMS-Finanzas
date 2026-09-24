@@ -1,0 +1,236 @@
+<section>
+  <h1 class="text-3xl font-bold text-gray-900">Tipo de cambio</h1>
+  <p class="text-gray-500">Convierte entre más de 160 monedas y mira cómo ha cambiado su valor.</p>
+</section>
+
+<!-- Filtros: afectan a todo lo de abajo -->
+<section class="mt-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div class="flex items-end gap-2">
+    <div class="min-w-0 flex-1">
+      <label for="base" class="block text-sm font-medium text-gray-700">De</label>
+      <select
+        id="base"
+        (change)="cambiarBase($event)"
+        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none sm:w-64"
+      >
+        <optgroup label="Populares">
+          @for (m of populares(); track m.codigo) {
+            <option
+              [value]="m.codigo"
+              [selected]="m.codigo === base()"
+              [disabled]="m.codigo === destino()"
+            >
+              {{ m.codigo }} · {{ m.nombre }}
+            </option>
+          }
+        </optgroup>
+        <optgroup label="Todas">
+          @for (m of otras(); track m.codigo) {
+            <option
+              [value]="m.codigo"
+              [selected]="m.codigo === base()"
+              [disabled]="m.codigo === destino()"
+            >
+              {{ m.codigo }} · {{ m.nombre }}
+            </option>
+          }
+        </optgroup>
+      </select>
+    </div>
+
+    <button
+      type="button"
+      (click)="invertir()"
+      title="Intercambiar monedas"
+      aria-label="Intercambiar monedas"
+      class="h-10.5 rounded-md border border-gray-300 bg-white px-3 text-gray-700 hover:bg-gray-100"
+    >
+      ⇄
+    </button>
+
+    <div class="min-w-0 flex-1">
+      <label for="destino" class="block text-sm font-medium text-gray-700">A</label>
+      <select
+        id="destino"
+        (change)="cambiarDestino($event)"
+        class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none sm:w-64"
+      >
+        <optgroup label="Populares">
+          @for (m of populares(); track m.codigo) {
+            <option
+              [value]="m.codigo"
+              [selected]="m.codigo === destino()"
+              [disabled]="m.codigo === base()"
+            >
+              {{ m.codigo }} · {{ m.nombre }}
+            </option>
+          }
+        </optgroup>
+        <optgroup label="Todas">
+          @for (m of otras(); track m.codigo) {
+            <option
+              [value]="m.codigo"
+              [selected]="m.codigo === destino()"
+              [disabled]="m.codigo === base()"
+            >
+              {{ m.codigo }} · {{ m.nombre }}
+            </option>
+          }
+        </optgroup>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-sm font-medium text-gray-700">Periodo</p>
+    <div class="mt-1 inline-flex flex-wrap rounded-md border border-gray-300 bg-white p-1">
+      @for (p of periodos; track p.meses) {
+        <button
+          type="button"
+          (click)="cambiarPeriodo(p.meses)"
+          [attr.aria-pressed]="p.meses === meses()"
+          class="rounded px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          [class.bg-green-600!]="p.meses === meses()"
+          [class.text-white!]="p.meses === meses()"
+        >
+          {{ p.texto }}
+        </button>
+      }
+    </div>
+  </div>
+</section>
+
+@if (estado() === 'error') {
+  <div class="mt-6 rounded-xl border border-red-200 bg-red-50 p-6">
+    <p class="font-semibold text-red-800">No se pudo obtener el tipo de cambio.</p>
+    <p class="mt-1 text-sm text-red-700">Revisa tu conexión a internet e inténtalo de nuevo.</p>
+    <button
+      type="button"
+      (click)="cargar()"
+      class="mt-4 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+    >
+      Reintentar
+    </button>
+  </div>
+} @else if (actual(); as hoy) {
+  <!-- Al recargar se mantiene lo anterior, solo más tenue -->
+  <div class="transition-opacity" [class.opacity-50]="estado() === 'cargando'">
+    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+      <!-- Tasa de hoy -->
+      <article class="rounded-xl bg-gray-900 p-6 text-white shadow-md">
+        <p class="text-sm text-gray-400">1 {{ hoy.base }} equivale a</p>
+        <p class="mt-2 text-5xl font-bold">
+          {{ formatearTasa(hoy.rate) }} <span class="text-2xl text-gray-400">{{ hoy.quote }}</span>
+        </p>
+
+        <p
+          class="mt-3 text-sm font-medium"
+          [class.text-green-400]="variacionDia() >= 0"
+          [class.text-red-400]="variacionDia() < 0"
+        >
+          {{ variacionDia() >= 0 ? '▲' : '▼' }} {{ formatearTasa(abs(variacionDia())) }} respecto al
+          día anterior
+        </p>
+
+        <p class="mt-6 text-xs text-gray-400">
+          Fecha: {{ hoy.date | date: 'dd/MM/yyyy' }} · Fuente: Frankfurter API
+        </p>
+      </article>
+
+      <!-- Conversor -->
+      <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900">Conversor</h2>
+
+        <label for="monto" class="mt-4 block text-sm font-medium text-gray-700">
+          Monto en {{ hoy.base }}
+        </label>
+        <input
+          id="monto"
+          type="number"
+          min="0"
+          [value]="monto()"
+          (input)="cambiarMonto($event)"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        />
+
+        <p class="mt-6 text-sm text-gray-500">Equivale a</p>
+        <p class="text-3xl font-bold text-gray-900">
+          {{ formatearDinero(resultado(), hoy.quote) }}
+        </p>
+        <p class="mt-1 text-sm text-gray-500">
+          1 {{ hoy.quote }} = {{ formatearTasa(1 / hoy.rate) }} {{ hoy.base }}
+        </p>
+      </article>
+    </div>
+
+    <!-- Gráfico -->
+    <section class="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">{{ hoy.base }} → {{ hoy.quote }}</h2>
+          <p class="text-sm text-gray-500">Evolución · {{ textoPeriodo() }}</p>
+        </div>
+
+        <dl class="grid grid-cols-3 gap-6 text-sm">
+          <div>
+            <dt class="text-gray-500">Mínimo</dt>
+            <dd class="font-semibold text-gray-900">{{ formatearTasa(minimo()) }}</dd>
+          </div>
+          <div>
+            <dt class="text-gray-500">Máximo</dt>
+            <dd class="font-semibold text-gray-900">{{ formatearTasa(maximo()) }}</dd>
+          </div>
+          <div>
+            <dt class="text-gray-500">Variación</dt>
+            <dd
+              class="font-semibold"
+              [class.text-green-600]="variacionPeriodo() >= 0"
+              [class.text-red-600]="variacionPeriodo() < 0"
+            >
+              {{ variacionPeriodo() >= 0 ? '▲' : '▼' }}
+              {{ formatearPorcentaje(variacionPeriodo()) }}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      @if (tasas().length > 1) {
+        <app-grafico-tasas class="mt-6" [tasas]="tasas()" />
+      }
+
+      <!-- Los mismos datos como tabla -->
+      <details class="mt-4 border-t border-gray-200 pt-4">
+        <summary class="cursor-pointer text-sm font-medium text-green-600 hover:text-green-700">
+          Ver datos en tabla
+        </summary>
+        <div class="mt-3 max-h-72 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-white text-left text-gray-500">
+              <tr>
+                <th class="py-2 font-medium">Fecha</th>
+                <th class="py-2 text-right font-medium">1 {{ hoy.base }} en {{ hoy.quote }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @for (tasa of tasasRecientes(); track tasa.date) {
+                <tr>
+                  <td class="py-2 text-gray-600">{{ tasa.date | date: 'dd/MM/yyyy' }}</td>
+                  <td class="py-2 text-right font-medium text-gray-900">
+                    {{ formatearTasa(tasa.rate) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </div>
+} @else {
+  <!-- Primera carga -->
+  <div class="mt-6 grid gap-6 lg:grid-cols-2">
+    <div class="h-48 animate-pulse rounded-xl bg-gray-200"></div>
+    <div class="h-48 animate-pulse rounded-xl bg-gray-200"></div>
+  </div>
+  <div class="mt-8 h-96 animate-pulse rounded-xl bg-gray-200"></div>
+}
