@@ -1,0 +1,151 @@
+<section>
+  <h1 class="text-3xl font-bold text-gray-900">Administración</h1>
+  <p class="text-gray-500">Gestiona las categorías disponibles y las cuentas de usuario.</p>
+</section>
+
+@if (mensaje(); as aviso) {
+  <p
+    role="status"
+    class="mt-6 rounded-md px-4 py-3 text-sm"
+    [class]="aviso.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'"
+  >
+    {{ aviso.texto }}
+  </p>
+}
+
+<div class="mt-6 grid items-start gap-6 lg:grid-cols-2">
+  <!-- Categorías -->
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div class="border-b border-gray-200 px-6 py-4">
+      <h2 class="text-lg font-semibold text-gray-900">Categorías</h2>
+    </div>
+
+    <form
+      [formGroup]="formulario"
+      (ngSubmit)="guardarCategoria()"
+      novalidate
+      class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-start"
+    >
+      <div class="flex-1">
+        <label for="nombre-categoria" class="sr-only">Nombre de la categoría</label>
+        <input
+          id="nombre-categoria"
+          type="text"
+          formControlName="nombre"
+          placeholder="Nombre de la categoría"
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneErrorNombre()"
+        />
+        @if (tieneErrorNombre()) {
+          <p class="mt-1 text-xs text-red-600">Escribe un nombre (máx. 50 caracteres).</p>
+        }
+      </div>
+      <label for="tipo-categoria" class="sr-only">Tipo</label>
+      <select
+        id="tipo-categoria"
+        formControlName="tipo"
+        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+      >
+        <option value="gasto">Gasto</option>
+        <option value="ingreso">Ingreso</option>
+      </select>
+      <div class="flex gap-2">
+        <button
+          type="submit"
+          [disabled]="guardando()"
+          class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-70"
+        >
+          {{ editando() ? 'Guardar' : 'Agregar' }}
+        </button>
+        @if (editando()) {
+          <button
+            type="button"
+            (click)="cancelarEdicion()"
+            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+        }
+      </div>
+    </form>
+
+    <div class="grid gap-6 p-4 sm:grid-cols-2">
+      @for (grupo of grupos(); track grupo.titulo) {
+        <div>
+          <h3 class="text-sm font-semibold tracking-wide text-gray-500 uppercase">
+            {{ grupo.titulo }}
+          </h3>
+          <ul class="mt-2 divide-y divide-gray-100">
+            @for (categoria of grupo.lista; track categoria.id) {
+              <li
+                class="flex items-center justify-between gap-2 py-2"
+                [class.text-green-700]="editando()?.id === categoria.id"
+              >
+                <span class="truncate text-gray-900">{{ categoria.nombre }}</span>
+                <span class="flex shrink-0 gap-2 text-sm">
+                  <button
+                    type="button"
+                    (click)="editarCategoria(categoria)"
+                    class="font-medium text-gray-500 hover:text-green-700"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="eliminarCategoria(categoria)"
+                    class="font-medium text-gray-500 hover:text-red-600"
+                  >
+                    Eliminar
+                  </button>
+                </span>
+              </li>
+            } @empty {
+              <li class="py-2 text-sm text-gray-400">Sin categorías</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Usuarios -->
+  <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div class="border-b border-gray-200 px-6 py-4">
+      <h2 class="text-lg font-semibold text-gray-900">Usuarios</h2>
+    </div>
+    <ul class="divide-y divide-gray-100">
+      @for (usuario of usuarios(); track usuario.id) {
+        <li class="flex items-center gap-3 px-6 py-3">
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-gray-900">
+              {{ usuario.nombre }}
+              @if (usuario.id === idActual()) {
+                <span class="text-sm font-normal text-gray-400">(tú)</span>
+              }
+            </p>
+            <p class="truncate text-sm text-gray-500">{{ usuario.email }}</p>
+          </div>
+          <span
+            class="shrink-0 rounded px-2 py-0.5 text-xs font-semibold"
+            [class]="
+              usuario.rol === 'ADMIN' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'
+            "
+          >
+            {{ usuario.rol }}
+          </span>
+          @if (usuario.id !== idActual()) {
+            <button
+              type="button"
+              (click)="eliminarUsuario(usuario)"
+              class="shrink-0 text-sm font-medium text-gray-500 hover:text-red-600"
+            >
+              Eliminar
+            </button>
+          }
+        </li>
+      } @empty {
+        <li class="px-6 py-8 text-center text-sm text-gray-500">Cargando usuarios…</li>
+      }
+    </ul>
+  </section>
+</div>

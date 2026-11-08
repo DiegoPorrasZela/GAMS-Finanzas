@@ -1,0 +1,95 @@
+<section class="mx-auto max-w-md">
+  <div class="text-center">
+    <h1 class="text-3xl font-bold text-gray-900">Crea tu cuenta</h1>
+    <p class="mt-1 text-gray-500">Empieza a llevar el control de tus ingresos y gastos.</p>
+  </div>
+
+  <form
+    [formGroup]="formulario"
+    (ngSubmit)="registrar()"
+    novalidate
+    class="mt-6 space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+  >
+    @if (error()) {
+      <p role="alert" class="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</p>
+    }
+
+    <div>
+      <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
+      <input
+        id="nombre"
+        type="text"
+        autocomplete="name"
+        formControlName="nombre"
+        placeholder="Ej. Ana Torres"
+        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        [class.border-red-500!]="tieneError('nombre')"
+      />
+      @if (tieneError('nombre')) {
+        <p class="mt-1 text-xs text-red-600">Escribe tu nombre (máx. 80 caracteres).</p>
+      }
+    </div>
+
+    <div>
+      <label for="email" class="block text-sm font-medium text-gray-700">Correo</label>
+      <input
+        id="email"
+        type="email"
+        autocomplete="email"
+        formControlName="email"
+        placeholder="tu@correo.com"
+        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        [class.border-red-500!]="tieneError('email')"
+      />
+      @if (tieneError('email')) {
+        <p class="mt-1 text-xs text-red-600">Escribe un correo válido.</p>
+      }
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="new-password"
+          formControlName="password"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneError('password')"
+        />
+        @if (tieneError('password')) {
+          <p class="mt-1 text-xs text-red-600">Mínimo 6 caracteres.</p>
+        }
+      </div>
+      <div>
+        <label for="confirmar" class="block text-sm font-medium text-gray-700">Repite la contraseña</label>
+        <input
+          id="confirmar"
+          type="password"
+          autocomplete="new-password"
+          formControlName="confirmar"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneError('confirmar') || noCoinciden()"
+        />
+        @if (noCoinciden()) {
+          <p class="mt-1 text-xs text-red-600">Las contraseñas no coinciden.</p>
+        } @else if (tieneError('confirmar')) {
+          <p class="mt-1 text-xs text-red-600">Repite tu contraseña.</p>
+        }
+      </div>
+    </div>
+
+    <button
+      type="submit"
+      [disabled]="enviando()"
+      class="w-full rounded-md bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-wait disabled:opacity-70"
+    >
+      {{ enviando() ? 'Creando cuenta…' : 'Crear cuenta' }}
+    </button>
+
+    <p class="text-center text-sm text-gray-500">
+      ¿Ya tienes cuenta?
+      <a routerLink="/login" class="font-medium text-green-600 hover:text-green-700">Inicia sesión</a>
+    </p>
+  </form>
+</section>

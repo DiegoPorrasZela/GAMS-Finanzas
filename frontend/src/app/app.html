@@ -1,12 +1,12 @@
 <header class="sticky top-0 z-10 bg-gray-900 shadow-md">
   <nav
-    class="max-w-6xl mx-auto flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+    class="max-w-6xl mx-auto flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
   >
     <a routerLink="/" class="text-xl font-bold text-white">
       <span class="text-green-500">GAMS</span> Finanzas
     </a>
     <div class="flex flex-wrap gap-2">
-      @for (enlace of enlaces; track enlace.ruta) {
+      @for (enlace of enlaces(); track enlace.ruta) {
         <a
           [routerLink]="enlace.ruta"
           routerLinkActive="bg-green-600! text-white!"
@@ -14,6 +14,34 @@
           ariaCurrentWhenActive="page"
           class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
           >{{ enlace.texto }}</a
+        >
+      }
+    </div>
+
+    <!-- Sesión -->
+    <div class="flex items-center gap-3 text-sm">
+      @if (usuario(); as usuario) {
+        <span class="text-gray-300">
+          {{ usuario.nombre }}
+          @if (esAdmin()) {
+            <span class="ml-1 rounded bg-green-600 px-1.5 py-0.5 text-xs font-semibold text-white"
+              >ADMIN</span
+            >
+          }
+        </span>
+        <button
+          type="button"
+          (click)="cerrarSesion()"
+          class="rounded-md border border-gray-700 px-3 py-1.5 font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+        >
+          Cerrar sesión
+        </button>
+      } @else {
+        <a routerLink="/login" class="font-medium text-gray-300 hover:text-white">Iniciar sesión</a>
+        <a
+          routerLink="/registro"
+          class="rounded-md bg-green-600 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-green-700"
+          >Crear cuenta</a
         >
       }
     </div>

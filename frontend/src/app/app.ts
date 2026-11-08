@@ -1,5 +1,12 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from './services/auth.service';
+
+interface Enlace {
+  ruta: string;
+  texto: string;
+  exacto: boolean;
+}
 
 @Component({
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
@@ -8,10 +15,30 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
   templateUrl: './app.html',
 })
 export class App {
-  protected readonly enlaces = [
-    { ruta: '/', texto: 'Inicio', exacto: true },
-    { ruta: '/movimientos', texto: 'Movimientos', exacto: false },
-    { ruta: '/tipo-cambio', texto: 'Tipo de cambio', exacto: false },
-    { ruta: '/acerca', texto: 'Acerca', exacto: false },
-  ];
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected readonly usuario = this.auth.usuario;
+  protected readonly esAdmin = this.auth.esAdmin;
+
+  // Los enlaces cambian según haya sesión y según el rol
+  protected readonly enlaces = computed<Enlace[]>(() => {
+    const privados: Enlace[] = this.usuario()
+      ? [
+          { ruta: '/', texto: 'Inicio', exacto: true },
+          { ruta: '/movimientos', texto: 'Movimientos', exacto: false },
+        ]
+      : [];
+    const publicos: Enlace[] = [
+      { ruta: '/tipo-cambio', texto: 'Tipo de cambio', exacto: false },
+      { ruta: '/acerca', texto: 'Acerca', exacto: false },
+    ];
+    const admin: Enlace[] = this.esAdmin() ? [{ ruta: '/admin', texto: 'Admin', exacto: false }] : [];
+    return [...privados, ...publicos, ...admin];
+  });
+
+  protected cerrarSesion(): void {
+    this.auth.cerrarSesion();
+    this.router.navigate(['/login']);
+  }
 }

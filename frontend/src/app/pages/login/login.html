@@ -1,0 +1,84 @@
+<section class="mx-auto max-w-md">
+  <div class="text-center">
+    <h1 class="text-3xl font-bold text-gray-900">Inicia sesión</h1>
+    <p class="mt-1 text-gray-500">Entra para ver y registrar tus movimientos.</p>
+  </div>
+
+  @if (sesionExpirada) {
+    <p class="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      Tu sesión expiró. Vuelve a iniciar sesión para continuar.
+    </p>
+  }
+
+  <form
+    [formGroup]="formulario"
+    (ngSubmit)="ingresar()"
+    novalidate
+    class="mt-6 space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+  >
+    @if (error()) {
+      <p role="alert" class="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</p>
+    }
+
+    <div>
+      <label for="email" class="block text-sm font-medium text-gray-700">Correo</label>
+      <input
+        id="email"
+        type="email"
+        autocomplete="email"
+        formControlName="email"
+        placeholder="tu@correo.com"
+        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        [class.border-red-500!]="tieneError('email')"
+      />
+      @if (tieneError('email')) {
+        <p class="mt-1 text-xs text-red-600">Escribe un correo válido.</p>
+      }
+    </div>
+
+    <div>
+      <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        formControlName="password"
+        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        [class.border-red-500!]="tieneError('password')"
+      />
+      @if (tieneError('password')) {
+        <p class="mt-1 text-xs text-red-600">Escribe tu contraseña.</p>
+      }
+    </div>
+
+    <button
+      type="submit"
+      [disabled]="enviando()"
+      class="w-full rounded-md bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-wait disabled:opacity-70"
+    >
+      {{ enviando() ? 'Ingresando…' : 'Iniciar sesión' }}
+    </button>
+
+    @if (lento()) {
+      <p class="text-center text-xs text-gray-500">
+        El servidor se está despertando, puede tardar hasta un minuto la primera vez…
+      </p>
+    }
+
+    <p class="text-center text-sm text-gray-500">
+      ¿No tienes cuenta?
+      <a routerLink="/registro" class="font-medium text-green-600 hover:text-green-700">Crea una</a>
+    </p>
+  </form>
+
+  <div class="mt-4 rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">
+    ¿Solo quieres probar?
+    <button
+      type="button"
+      (click)="usarCuentaDemo()"
+      class="font-medium text-green-600 hover:text-green-700"
+    >
+      Usar la cuenta demo
+    </button>
+  </div>
+</section>

@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 
 @Component({
@@ -11,6 +12,11 @@ import { MovimientosService, calcularTotales } from '../../services/movimientos.
 })
 export class Inicio {
   private readonly servicio = inject(MovimientosService);
+  private readonly auth = inject(AuthService);
+
+  protected readonly nombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
+  protected readonly cargando = this.servicio.cargando;
+  protected readonly error = this.servicio.error;
 
   private readonly totales = computed(() => calcularTotales(this.servicio.movimientos()));
 
@@ -19,4 +25,8 @@ export class Inicio {
   protected readonly saldo = computed(() => this.totales().saldo);
 
   protected readonly ultimos = computed(() => this.servicio.movimientos().slice(0, 4));
+
+  constructor() {
+    this.servicio.cargar();
+  }
 }

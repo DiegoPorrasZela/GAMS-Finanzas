@@ -1,20 +1,20 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { DatosMovimiento, Movimiento, TipoMovimiento } from '../models/finanzas.models';
+import { AuthService } from './auth.service';
+import { mensajeDeError } from './errores';
 
-export type TipoMovimiento = 'ingreso' | 'gasto';
-
-export interface Movimiento {
-  id: number;
-  descripcion: string;
-  categoria: string;
-  monto: number;
-  tipo: TipoMovimiento;
-  fecha: string; // AAAA-MM-DD
+// Así llega un movimiento desde el backend (tipo en mayúsculas)
+interface MovimientoApi extends Omit<Movimiento, 'tipo'> {
+  tipo: 'INGRESO' | 'GASTO';
 }
 
-export const CATEGORIAS: Record<TipoMovimiento, string[]> = {
-  ingreso: ['Sueldo', 'Mesada', 'Freelance', 'Venta', 'Otros'],
-  gasto: ['Comida', 'Transporte', 'Servicios', 'Educación', 'Salud', 'Ocio', 'Compras', 'Otros'],
-};
+const desdeApi = (m: MovimientoApi): Movimiento => ({
+  ...m,
+  tipo: m.tipo.toLowerCase() as TipoMovimiento,
+});
 
 // Suma ingresos, gastos y saldo de una lista (se usa en Inicio y en Movimientos)
 export function calcularTotales(lista: Movimiento[]) {
@@ -25,108 +25,64 @@ export function calcularTotales(lista: Movimiento[]) {
   return { ingresos, gastos, saldo: ingresos - gastos };
 }
 
-const CLAVE = 'gams-movimientos';
-
-// Datos de ejemplo hasta que exista el backend (Avance 2)
-const EJEMPLO: Movimiento[] = [
-  {
-    id: 1,
-    descripcion: 'Pago de prácticas',
-    categoria: 'Sueldo',
-    monto: 1500,
-    tipo: 'ingreso',
-    fecha: '2026-09-20',
-  },
-  {
-    id: 2,
-    descripcion: 'Menú del almuerzo',
-    categoria: 'Comida',
-    monto: 15,
-    tipo: 'gasto',
-    fecha: '2026-09-19',
-  },
-  {
-    id: 3,
-    descripcion: 'Recarga de tarjeta de bus',
-    categoria: 'Transporte',
-    monto: 30,
-    tipo: 'gasto',
-    fecha: '2026-09-18',
-  },
-  {
-    id: 4,
-    descripcion: 'Plan de celular',
-    categoria: 'Servicios',
-    monto: 45,
-    tipo: 'gasto',
-    fecha: '2026-09-15',
-  },
-  {
-    id: 5,
-    descripcion: 'Salida al cine',
-    categoria: 'Ocio',
-    monto: 160,
-    tipo: 'gasto',
-    fecha: '2026-09-12',
-  },
-  {
-    id: 6,
-    descripcion: 'Libro de cálculo',
-    categoria: 'Educación',
-    monto: 85,
-    tipo: 'gasto',
-    fecha: '2026-09-08',
-  },
-  {
-    id: 7,
-    descripcion: 'Diseño de logo',
-    categoria: 'Freelance',
-    monto: 250,
-    tipo: 'ingreso',
-    fecha: '2026-09-05',
-  },
-];
-
+// CRUD de movimientos contra el backend. Mantiene una copia local en una signal
+// para que Inicio y Movimientos se actualicen solos al agregar, editar o eliminar.
 @Injectable({ providedIn: 'root' })
 export class MovimientosService {
-  private readonly lista = signal<Movimiento[]>(this.leer());
+  private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private readonly api = `${environment.apiUrl}/movimientos`;
+
+  private readonly lista = signal<Movimiento[]>([]);
+  private duenoDeLaLista: number | null = null;
+
+  readonly cargando = signal(false);
+  readonly error = signal<string | null>(null);
 
   // Siempre del más reciente al más antiguo
   readonly movimientos = computed(() =>
     [...this.lista()].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
   );
 
-  agregar(datos: Omit<Movimiento, 'id'>): void {
-    const id = Math.max(0, ...this.lista().map((m) => m.id)) + 1;
-    this.lista.update((lista) => [...lista, { ...datos, id }]);
-    this.guardar();
-  }
-
-  eliminar(id: number): void {
-    this.lista.update((lista) => lista.filter((m) => m.id !== id));
-    this.guardar();
-  }
-
-  restablecer(): void {
-    this.lista.set(EJEMPLO);
-    this.guardar();
-  }
-
-  // localStorage puede fallar (modo privado, almacenamiento bloqueado): en ese caso usamos el ejemplo
-  private leer(): Movimiento[] {
-    try {
-      const texto = localStorage.getItem(CLAVE);
-      return texto ? JSON.parse(texto) : EJEMPLO;
-    } catch {
-      return EJEMPLO;
+  cargar(): void {
+    const usuarioId = this.auth.usuario()?.id ?? null;
+    if (usuarioId !== this.duenoDeLaLista) {
+      // Cambió el usuario: no mostrar ni por un instante los datos del anterior
+      this.lista.set([]);
+      this.duenoDeLaLista = usuarioId;
     }
+
+    this.cargando.set(true);
+    this.error.set(null);
+    this.http.get<MovimientoApi[]>(this.api).subscribe({
+      next: (datos) => {
+        this.lista.set(datos.map(desdeApi));
+        this.cargando.set(false);
+      },
+      error: (e) => {
+        this.error.set(mensajeDeError(e));
+        this.cargando.set(false);
+      },
+    });
   }
 
-  private guardar(): void {
-    try {
-      localStorage.setItem(CLAVE, JSON.stringify(this.lista()));
-    } catch {
-      // Si no se puede guardar, los datos siguen en memoria mientras la página esté abierta
-    }
+  agregar(datos: DatosMovimiento): Observable<Movimiento> {
+    return this.http.post<MovimientoApi>(this.api, datos).pipe(
+      map(desdeApi),
+      tap((nuevo) => this.lista.update((lista) => [...lista, nuevo])),
+    );
+  }
+
+  actualizar(id: number, datos: DatosMovimiento): Observable<Movimiento> {
+    return this.http.put<MovimientoApi>(`${this.api}/${id}`, datos).pipe(
+      map(desdeApi),
+      tap((editado) => this.lista.update((lista) => lista.map((m) => (m.id === id ? editado : m)))),
+    );
+  }
+
+  eliminar(id: number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.api}/${id}`)
+      .pipe(tap(() => this.lista.update((lista) => lista.filter((m) => m.id !== id))));
   }
 }

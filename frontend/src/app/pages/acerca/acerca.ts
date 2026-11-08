@@ -6,4 +6,14 @@ import { Component } from '@angular/core';
   styleUrl: './acerca.css',
   templateUrl: './acerca.html',
 })
-export class Acerca {}
+export class Acerca {
+  protected readonly tecnologias = [
+    'Angular',
+    'Tailwind CSS',
+    'Java 21',
+    'Spring Boot',
+    'Spring Security + JWT',
+    'PostgreSQL',
+    'API Frankfurter',
+  ];
+}

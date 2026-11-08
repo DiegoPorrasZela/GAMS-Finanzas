@@ -1,26 +1,77 @@
-# GAMS Finanzas
+# GAMS Finanzas — Frontend
 
-Aplicación web de finanzas personales para registrar ingresos y gastos, ver el saldo y consultar el tipo de cambio.
+Aplicación web de finanzas personales para jóvenes y universitarios: registra tus ingresos y gastos, conoce
+tu saldo al instante y consulta el tipo de cambio. Proyecto del curso **Desarrollo Full Stack** — Universidad
+Tecnológica del Perú (UTP).
 
-Proyecto del curso **Desarrollo Full Stack** — Universidad Tecnológica del Perú (UTP).
+- **Backend (API REST):** <https://github.com/DiegoPorrasZela/GAMS-Finanzas-backend>
+- **Cuenta de prueba:** `demo@gams.pe` / `demo123`
 
-## Estructura
+## Funcionalidades
+
+- **Cuentas de usuario:** registro, inicio y cierre de sesión. La sesión dura 8 horas (token JWT).
+- **Inicio:** saldo, ingresos, gastos y últimos movimientos del usuario.
+- **Movimientos:** registrar, editar, eliminar, filtrar por tipo o categoría y buscar.
+- **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública
+  [Frankfurter](https://frankfurter.dev).
+- **Administración** (solo rol ADMIN): crear, editar y eliminar categorías, y gestionar las cuentas de usuario.
+
+## Tecnologías
+
+- Angular 22 (componentes standalone, signals, formularios reactivos)
+- Tailwind CSS 4
+- TypeScript y Vitest para las pruebas
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U["Navegador"] --> F["Frontend Angular<br/>(Vercel)"]
+    F -- "HTTPS + token JWT" --> B["API REST Spring Boot<br/>(Render)"]
+    F -- "HTTPS" --> X["API Frankfurter<br/>(tipo de cambio)"]
+    B -- "JDBC + SSL" --> D[("PostgreSQL<br/>(Neon)")]
+```
+
+El frontend nunca habla con la base de datos: todo pasa por el API, que valida la sesión y los permisos.
 
 ```
-GAMS-Finanzas/
-├── frontend/   Angular 22 + Tailwind CSS 4
-└── backend/    Java + Spring Boot (Avance 2)
+frontend/src/
+├── app/
+│   ├── components/     Componentes reutilizables (gráfico de tasas)
+│   ├── guards/         Protegen las rutas según la sesión y el rol
+│   ├── interceptors/   Agregan el token JWT a cada petición al backend
+│   ├── models/         Tipos de datos (Movimiento, Categoria, Usuario)
+│   ├── pages/          Pantallas: inicio, movimientos, tipo-cambio, admin, login, registro, acerca
+│   └── services/       Comunicación con el API y estado de la sesión
+└── environments/       URL del API en desarrollo y en producción
 ```
 
-## Funcionalidades (Avance 1)
+### Rutas y permisos
 
-- **Inicio:** resumen de saldo, ingresos, gastos y últimos movimientos.
-- **Movimientos:** registrar, filtrar, buscar y eliminar ingresos y gastos.
-- **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública [Frankfurter](https://frankfurter.dev).
+| Ruta | Acceso |
+|---|---|
+| `/login`, `/registro` | Solo sin sesión |
+| `/` (Inicio), `/movimientos` | Con sesión |
+| `/admin` | Solo ADMIN |
+| `/tipo-cambio`, `/acerca` | Público |
 
-## Cómo ejecutar el frontend
+Los guards solo mejoran la experiencia (no muestran pantallas que no corresponden). La seguridad real está
+en el backend, que rechaza cualquier petición sin permiso aunque alguien salte el frontend.
 
-Requisitos: [Node.js](https://nodejs.org) 22.22 o superior (se recomienda 24 LTS).
+### Patrones de diseño
+
+| Patrón | Dónde se usa | Para qué |
+|---|---|---|
+| Singleton + inyección de dependencias | Servicios con `providedIn: 'root'` e `inject()` | Una sola instancia compartida por toda la app |
+| Observer | `signal`/`computed` y Observables de RxJS | La pantalla se actualiza sola cuando cambian los datos |
+| Chain of Responsibility | `interceptors/auth.interceptor.ts` | Cada petición pasa por el interceptor: agrega el token y maneja la sesión vencida (401) |
+| Guard | `guards/auth.guards.ts` | Decidir si se puede entrar a una ruta |
+| Adapter | Funciones `desdeApi()` de los servicios | Convertir el formato del API (`INGRESO`) al de la app (`ingreso`) |
+
+## Cómo ejecutar
+
+Requisitos: [Node.js](https://nodejs.org) 22.22 o superior y el
+[backend](https://github.com/DiegoPorrasZela/GAMS-Finanzas-backend) corriendo en `http://localhost:8080`.
 
 ```bash
 cd frontend
@@ -29,5 +80,8 @@ npm start
 ```
 
 Abrir <http://localhost:4200>.
+
+La URL del API está en `src/environments/environment.development.ts` (desarrollo) y
+`src/environments/environment.ts` (producción).
 
 Pruebas: `npm test`
