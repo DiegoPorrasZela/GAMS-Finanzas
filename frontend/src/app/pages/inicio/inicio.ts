@@ -2,7 +2,9 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { CATEGORIA_SALDO_INICIAL, esSaldoInicial } from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
+import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
@@ -11,10 +13,19 @@ import {
   capitalizar,
   claveMes,
   diasRestantesDelMes,
+  hoy,
   mesActual,
   mesesConDatos,
   nombreMes,
 } from '../../utils/fechas';
+
+function leer(clave: string): boolean {
+  try {
+    return localStorage.getItem(clave) === '1';
+  } catch {
+    return false;
+  }
+}
 
 // Colores de las barras del gráfico por categoría
 const COLORES = [
@@ -38,6 +49,7 @@ export class Inicio {
   private readonly movimientosService = inject(MovimientosService);
   private readonly presupuestosService = inject(PresupuestosService);
   private readonly metasService = inject(MetasService);
+  private readonly categoriasService = inject(CategoriasService);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(NonNullableFormBuilder);
 
@@ -74,6 +86,22 @@ export class Inicio {
     () =>
       !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
   );
+
+  // ---- Saldo inicial: el dinero con el que empieza (se registra una sola vez) ----
+  protected readonly tieneSaldoInicial = computed(() =>
+    this.movimientosService.movimientos().some(esSaldoInicial),
+  );
+  private readonly claveOmitido = `gams-sin-saldo-inicial-${this.auth.usuario()?.id}`;
+  private readonly saldoInicialOmitido = signal(leer(this.claveOmitido));
+  protected readonly mostrarSaldoInicial = computed(
+    () =>
+      !this.cargando() && !this.error() && !this.tieneSaldoInicial() && !this.saldoInicialOmitido(),
+  );
+  protected readonly guardandoSaldoInicial = signal(false);
+  protected readonly errorSaldoInicial = signal<string | null>(null);
+  protected readonly formSaldoInicial = this.fb.group({
+    monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
+  });
   protected readonly totalesMes = computed(() => calcularTotales(this.movimientosDelMes()));
   protected readonly ultimos = computed(() => this.movimientosDelMes().slice(0, 5));
 
@@ -144,6 +172,47 @@ export class Inicio {
     this.movimientosService.cargar();
     this.presupuestosService.cargar();
     this.metasService.cargar();
+    this.categoriasService.cargar();
+  }
+
+  protected guardarSaldoInicial(): void {
+    this.formSaldoInicial.markAllAsTouched();
+    if (this.formSaldoInicial.invalid || this.guardandoSaldoInicial()) return;
+
+    const categoria = this.categoriasService
+      .categorias()
+      .find((c) => esSaldoInicial({ nombre: c.nombre, tipo: c.tipo }));
+    if (!categoria) {
+      this.errorSaldoInicial.set('Todavía se están cargando los datos. Inténtalo en un momento.');
+      return;
+    }
+
+    this.guardandoSaldoInicial.set(true);
+    this.errorSaldoInicial.set(null);
+    this.movimientosService
+      .agregar({
+        descripcion: CATEGORIA_SALDO_INICIAL,
+        monto: this.formSaldoInicial.getRawValue().monto!,
+        fecha: hoy(),
+        categoriaId: categoria.id,
+      })
+      .subscribe({
+        next: () => this.guardandoSaldoInicial.set(false),
+        error: (e) => {
+          this.guardandoSaldoInicial.set(false);
+          this.errorSaldoInicial.set(mensajeDeError(e));
+        },
+      });
+  }
+
+  // "Empiezo sin dinero": no volver a mostrar la tarjeta a este usuario
+  protected omitirSaldoInicial(): void {
+    this.saldoInicialOmitido.set(true);
+    try {
+      localStorage.setItem(this.claveOmitido, '1');
+    } catch {
+      // Sin localStorage, solo se oculta hasta recargar la página
+    }
   }
 
   protected cambiarMes(evento: Event): void {

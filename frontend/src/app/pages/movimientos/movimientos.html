@@ -164,8 +164,8 @@
           </p>
         }
 
-        <!-- Repetir cada mes (solo al crear) -->
-        @if (!editando()) {
+        <!-- Repetir cada mes (solo al crear, y nunca para el saldo inicial) -->
+        @if (!editando() && !esSaldoInicialElegido()) {
           <label class="flex cursor-pointer items-start gap-3 rounded-md bg-gray-50 p-3 text-sm">
             <input
               type="checkbox"

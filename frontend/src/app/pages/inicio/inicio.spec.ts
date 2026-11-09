@@ -38,10 +38,53 @@ describe('Inicio', () => {
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     http.expectOne(`${api}/presupuestos`).flush(presupuestos);
     http.expectOne(`${api}/metas`).flush(metas);
+    http.expectOne(`${api}/categorias`).flush([
+      { id: 1, nombre: 'Sueldo', tipo: 'INGRESO' },
+      { id: 14, nombre: 'Saldo inicial', tipo: 'INGRESO' },
+      { id: 6, nombre: 'Comida', tipo: 'GASTO' },
+    ]);
     await fixture.whenStable();
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
+
+  it('should register the initial balance from the card, only once', async () => {
+    await crear([]);
+    expect(texto()).toContain('¿Con cuánto dinero empezaste?');
+
+    const monto = fixture.nativeElement.querySelector('#saldo-inicial') as HTMLInputElement;
+    monto.value = '350';
+    monto.dispatchEvent(new Event('input'));
+    monto.closest('form')!.dispatchEvent(new Event('submit'));
+
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
+    expect(peticion.request.body).toEqual({
+      descripcion: 'Saldo inicial',
+      monto: 350,
+      fecha: expect.any(String),
+      categoriaId: 14,
+    });
+    peticion.flush({ id: 9, descripcion: 'Saldo inicial', monto: 350, fecha: `${mes}-01`, tipo: 'INGRESO', categoriaId: 14, categoria: 'Saldo inicial', automatico: false });
+    await fixture.whenStable();
+
+    // Ya tiene saldo inicial: la tarjeta desaparece
+    expect(texto()).not.toContain('¿Con cuánto dinero empezaste?');
+    expect(texto()).toContain('1,250.00'); // saldo: 900 + 350
+  });
+
+  it('should hide the initial balance card when the user starts without money', async () => {
+    await crear([]);
+    const boton = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (b: HTMLButtonElement) => b.textContent?.trim() === 'Empiezo sin dinero',
+    ) as HTMLButtonElement;
+    boton.click();
+    await fixture.whenStable();
+
+    expect(texto()).not.toContain('¿Con cuánto dinero empezaste?');
+  });
 
   it('should show the month totals, the budget alert and the spending by category', async () => {
     await crear([{ anio, mes: numeroMes, limiteGasto: 600, ahorroObjetivo: 300 }]);
@@ -67,7 +110,7 @@ describe('Inicio', () => {
     const limite = fixture.nativeElement.querySelector('#limite') as HTMLInputElement;
     limite.value = '800';
     limite.dispatchEvent(new Event('input'));
-    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    limite.closest('form')!.dispatchEvent(new Event('submit'));
 
     const peticion = http.expectOne({ method: 'PUT', url: `${api}/presupuestos/${anio}/${numeroMes}` });
     expect(peticion.request.body).toEqual({ limiteGasto: 800, ahorroObjetivo: 0 });

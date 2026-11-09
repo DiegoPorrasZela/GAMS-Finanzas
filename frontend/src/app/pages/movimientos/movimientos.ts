@@ -1,13 +1,13 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
   DatosMovimiento,
   Movimiento,
   Recurrente,
   TipoMovimiento,
+  esSaldoInicial,
 } from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
@@ -15,8 +15,6 @@ import { MovimientosService, calcularTotales } from '../../services/movimientos.
 import { RecurrentesService } from '../../services/recurrentes.service';
 import { capitalizar, hoy, mesesConDatos, nombreMes } from '../../utils/fechas';
 import { noFutura } from '../../utils/validadores';
-
-const CATEGORIA_SALDO_INICIAL = 'Saldo inicial';
 
 // Efecto de un movimiento en el saldo: suma si es ingreso, resta si es gasto
 const efectoEnSaldo = (tipo: TipoMovimiento, monto: number) => (tipo === 'ingreso' ? monto : -monto);
@@ -31,7 +29,6 @@ export class Movimientos {
   private readonly servicio = inject(MovimientosService);
   private readonly categoriasService = inject(CategoriasService);
   private readonly recurrentesService = inject(RecurrentesService);
-  private readonly ruta = inject(ActivatedRoute);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
@@ -48,9 +45,18 @@ export class Movimientos {
   // ---- Formulario para agregar o editar ----
   protected readonly tipoNuevo = signal<TipoMovimiento>('gasto');
   protected readonly editando = signal<Movimiento | null>(null);
-  protected readonly categoriasNuevo = computed(() =>
-    this.categoriasService.categorias().filter((c) => c.tipo === this.tipoNuevo()),
+  // El saldo inicial se registra una sola vez: si ya existe, solo se ofrece al editar ese movimiento
+  private readonly saldoInicialRegistrado = computed(
+    () => this.servicio.movimientos().find(esSaldoInicial) ?? null,
   );
+  protected readonly categoriasNuevo = computed(() => {
+    const registrado = this.saldoInicialRegistrado();
+    const editando = this.editando();
+    return this.categoriasService
+      .categorias()
+      .filter((c) => c.tipo === this.tipoNuevo())
+      .filter((c) => !esSaldoInicial(c) || !registrado || editando?.id === registrado.id);
+  });
   protected readonly enviado = signal(false);
   protected readonly guardando = signal(false);
 
@@ -61,9 +67,6 @@ export class Movimientos {
     fecha: [this.hoy, [Validators.required, noFutura]],
     repetir: [false],
   });
-
-  // Categoría a elegir apenas lleguen las categorías (ej. "Saldo inicial" desde Inicio)
-  private categoriaPendiente: string | null = null;
 
   // ---- Movimientos automáticos ----
   protected readonly recurrentes = this.recurrentesService.recurrentes;
@@ -91,22 +94,11 @@ export class Movimientos {
     this.categoriasService.cargar();
     this.recurrentesService.cargar();
 
-    // Llegó desde "Registrar saldo inicial"
-    if (this.ruta.snapshot.queryParamMap.has('saldoInicial')) {
-      this.tipoNuevo.set('ingreso');
-      this.categoriaPendiente = CATEGORIA_SALDO_INICIAL;
-      this.formulario.controls.descripcion.setValue('Saldo inicial');
-    }
-
     // Cuando llegan las categorías o cambia el tipo, elige una categoría válida para ese tipo
     effect(() => {
       const opciones = this.categoriasNuevo();
       const control = this.formulario.controls.categoriaId;
-      const pendiente = opciones.find((c) => c.nombre === this.categoriaPendiente);
-      if (pendiente) {
-        control.setValue(pendiente.id);
-        this.categoriaPendiente = null;
-      } else if (!opciones.some((c) => c.id === control.value)) {
+      if (!opciones.some((c) => c.id === control.value)) {
         control.setValue(opciones[0]?.id ?? null);
       }
     });
@@ -150,6 +142,13 @@ export class Movimientos {
     this.tipoNuevo.set(tipo);
   }
 
+  // El saldo inicial no puede repetirse cada mes
+  protected esSaldoInicialElegido(): boolean {
+    const id = this.formulario.controls.categoriaId.value;
+    const categoria = this.categoriasNuevo().find((c) => c.id === id);
+    return !!categoria && esSaldoInicial(categoria);
+  }
+
   // Día del mes en que se repetirá (el de la fecha elegida)
   protected diaElegido(): number {
     return Number(this.formulario.controls.fecha.value.slice(8, 10)) || new Date().getDate();
@@ -183,7 +182,7 @@ export class Movimientos {
       return;
     }
 
-    const automatico = repetir && !editando;
+    const automatico = repetir && !editando && !this.esSaldoInicialElegido();
     const peticion: Observable<unknown> = editando
       ? this.servicio.actualizar(editando.id, datos)
       : automatico

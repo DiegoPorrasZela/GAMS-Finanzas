@@ -3,6 +3,12 @@
 
 export type TipoMovimiento = 'ingreso' | 'gasto';
 
+// Categoría del sistema para el dinero con el que empieza el usuario (se registra una sola vez)
+export const CATEGORIA_SALDO_INICIAL = 'Saldo inicial';
+
+export const esSaldoInicial = (item: { categoria?: string; nombre?: string; tipo: TipoMovimiento }) =>
+  item.tipo === 'ingreso' && (item.categoria ?? item.nombre) === CATEGORIA_SALDO_INICIAL;
+
 export interface Movimiento {
   id: number;
   descripcion: string;
