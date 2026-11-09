@@ -65,6 +65,15 @@ export class Inicio {
   protected readonly saldoTotal = computed(
     () => calcularTotales(this.movimientosService.movimientos()).saldo,
   );
+  // El dinero separado en metas sigue en tu saldo, pero ya no está disponible para gastar
+  protected readonly enMetas = computed(() =>
+    this.metasService.metas().reduce((suma, meta) => suma + meta.ahorrado, 0),
+  );
+  protected readonly disponible = computed(() => this.saldoTotal() - this.enMetas());
+  protected readonly sinMovimientos = computed(
+    () =>
+      !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
+  );
   protected readonly totalesMes = computed(() => calcularTotales(this.movimientosDelMes()));
   protected readonly ultimos = computed(() => this.movimientosDelMes().slice(0, 5));
 
@@ -150,6 +159,27 @@ export class Inicio {
     });
     this.errorPresupuesto.set(null);
     this.editandoPresupuesto.set(true);
+  }
+
+  // Consejo mientras se llena el formulario: lo que se puede gastar según los ingresos del mes
+  protected consejoPresupuesto() {
+    const ingresos = this.totalesMes().ingresos;
+    if (ingresos <= 0) return null;
+    const { limiteGasto, ahorroObjetivo } = this.formPresupuesto.getRawValue();
+    const ahorro = ahorroObjetivo ?? 0;
+    const total = (limiteGasto ?? 0) + ahorro;
+    return {
+      ingresos,
+      ahorro,
+      total,
+      sugerido: Math.max(0, ingresos - ahorro),
+      excede: limiteGasto !== null && total > ingresos,
+    };
+  }
+
+  protected usarSugerido(): void {
+    const consejo = this.consejoPresupuesto();
+    if (consejo) this.formPresupuesto.controls.limiteGasto.setValue(consejo.sugerido);
   }
 
   protected guardarPresupuesto(): void {

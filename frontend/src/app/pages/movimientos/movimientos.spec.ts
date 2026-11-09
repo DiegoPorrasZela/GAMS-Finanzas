@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { Movimientos } from './movimientos';
 
@@ -13,9 +14,9 @@ const categorias = [
   { id: 7, nombre: 'Transporte', tipo: 'GASTO' },
 ];
 const movimientos = [
-  { id: 1, descripcion: 'Pago de prácticas', monto: 1500, fecha: '2026-11-07', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo' },
-  { id: 2, descripcion: 'Menú del almuerzo', monto: 15, fecha: '2026-11-06', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
-  { id: 3, descripcion: 'Recarga de tarjeta', monto: 30, fecha: '2026-11-05', tipo: 'GASTO', categoriaId: 7, categoria: 'Transporte' },
+  { id: 1, descripcion: 'Pago de prácticas', monto: 1500, fecha: '2026-11-07', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
+  { id: 2, descripcion: 'Menú del almuerzo', monto: 15, fecha: '2026-11-06', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', automatico: false },
+  { id: 3, descripcion: 'Recarga de tarjeta', monto: 30, fecha: '2026-11-05', tipo: 'GASTO', categoriaId: 7, categoria: 'Transporte', automatico: false },
 ];
 
 describe('Movimientos', () => {
@@ -23,7 +24,7 @@ describe('Movimientos', () => {
   let http: HttpTestingController;
   let pagina: HTMLElement;
 
-  const filas = () => pagina.querySelectorAll('ul > li');
+  const filas = () => pagina.querySelectorAll('ul[aria-label="Lista de movimientos"] > li');
   const escribir = (id: string, valor: string) => {
     const input = pagina.querySelector<HTMLInputElement>(`#${id}`)!;
     input.value = valor;
@@ -34,7 +35,7 @@ describe('Movimientos', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Movimientos],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Movimientos);
@@ -43,10 +44,49 @@ describe('Movimientos', () => {
 
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     http.expectOne(`${api}/categorias`).flush(categorias);
+    http.expectOne(`${api}/recurrentes`).flush([]);
     await fixture.whenStable();
   });
 
   afterEach(() => http.verify());
+
+  it('should create an automatic movement when "Repetir cada mes" is checked', async () => {
+    escribir('descripcion', 'Sueldo');
+    escribir('monto', '1200');
+    pagina.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    enviarFormulario();
+
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
+    expect(peticion.request.body).toMatchObject({ descripcion: 'Sueldo', monto: 1200, categoriaId: 6 });
+    peticion.flush({ id: 1, descripcion: 'Sueldo', monto: 1200, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', dia: 9, proximoCargo: '2099-01-09', activo: true });
+    // El backend ya registró el primer movimiento: la lista se vuelve a cargar
+    http.expectOne(`${api}/movimientos`).flush(movimientos);
+    await fixture.whenStable();
+
+    expect(pagina.textContent).toContain('se registrará automáticamente');
+    expect(pagina.textContent).toContain('Día 9 de cada mes');
+  });
+
+  it('should ask before saving an expense that leaves the balance negative', async () => {
+    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    escribir('descripcion', 'Laptop');
+    escribir('monto', '5000');
+    enviarFormulario();
+    await fixture.whenStable();
+
+    expect(confirmar).toHaveBeenCalledWith(expect.stringContaining('tu saldo quedaría en S/ -3545.00'));
+    // Al cancelar no se envía nada (http.verify() lo comprueba)
+  });
+
+  it('should not accept a future date', async () => {
+    escribir('descripcion', 'Algo');
+    escribir('monto', '10');
+    escribir('fecha', '2099-01-01');
+    enviarFormulario();
+    await fixture.whenStable();
+
+    expect(pagina.textContent).toContain('La fecha no puede ser futura');
+  });
 
   it('should list the movements from the API', () => {
     expect(filas().length).toBe(3);

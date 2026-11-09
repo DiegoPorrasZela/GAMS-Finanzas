@@ -8,6 +8,24 @@
     {{ errorCarga() }}
   </p>
 }
+
+<!-- Cuánto se puede separar -->
+<section class="mt-6 grid gap-4 sm:grid-cols-3">
+  <article class="rounded-xl bg-gray-900 p-5 text-white shadow-md">
+    <p class="text-sm text-gray-400">Disponible para separar</p>
+    <p class="mt-1 text-2xl font-bold" [class.text-red-400]="disponible() < 0">
+      S/ {{ disponible() | number: '1.2-2' }}
+    </p>
+  </article>
+  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <p class="text-sm text-gray-500">Ya separado en metas</p>
+    <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
+  </article>
+  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <p class="text-sm text-gray-500">Tu saldo</p>
+    <p class="mt-1 text-2xl font-bold text-gray-900">S/ {{ saldo() | number: '1.2-2' }}</p>
+  </article>
+</section>
 @if (mensaje(); as aviso) {
   <p
     role="status"
@@ -72,10 +90,16 @@
         <input
           id="fecha-limite"
           type="date"
+          [min]="hoy"
           formControlName="fechaLimite"
           class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneError('fechaLimite')"
         />
-        <p class="mt-1 text-xs text-gray-500">Con fecha te decimos cuánto ahorrar cada mes.</p>
+        @if (tieneError('fechaLimite')) {
+          <p class="mt-1 text-xs text-red-600">La fecha límite no puede estar en el pasado.</p>
+        } @else {
+          <p class="mt-1 text-xs text-gray-500">Con fecha te decimos cuánto ahorrar cada mes.</p>
+        }
       </div>
 
       <button
@@ -210,6 +234,7 @@
                 [max]="hoy"
                 formControlName="fecha"
                 class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                [class.border-red-500!]="formAporte.controls.fecha.invalid && formAporte.controls.fecha.touched"
               />
             </div>
             <div class="flex gap-2">

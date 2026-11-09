@@ -1,11 +1,25 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DatosMovimiento, Movimiento, TipoMovimiento } from '../../models/finanzas.models';
+import { ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs';
+import {
+  DatosMovimiento,
+  Movimiento,
+  Recurrente,
+  TipoMovimiento,
+} from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
+import { RecurrentesService } from '../../services/recurrentes.service';
 import { capitalizar, hoy, mesesConDatos, nombreMes } from '../../utils/fechas';
+import { noFutura } from '../../utils/validadores';
+
+const CATEGORIA_SALDO_INICIAL = 'Saldo inicial';
+
+// Efecto de un movimiento en el saldo: suma si es ingreso, resta si es gasto
+const efectoEnSaldo = (tipo: TipoMovimiento, monto: number) => (tipo === 'ingreso' ? monto : -monto);
 
 @Component({
   imports: [ReactiveFormsModule, DatePipe, DecimalPipe],
@@ -16,14 +30,20 @@ import { capitalizar, hoy, mesesConDatos, nombreMes } from '../../utils/fechas';
 export class Movimientos {
   private readonly servicio = inject(MovimientosService);
   private readonly categoriasService = inject(CategoriasService);
+  private readonly recurrentesService = inject(RecurrentesService);
+  private readonly ruta = inject(ActivatedRoute);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
   protected readonly cargando = this.servicio.cargando;
   protected readonly errorCarga = computed(
-    () => this.servicio.error() ?? this.categoriasService.error(),
+    () =>
+      this.servicio.error() ?? this.categoriasService.error() ?? this.recurrentesService.error(),
   );
   protected readonly errorAccion = signal<string | null>(null);
+  protected readonly aviso = signal<string | null>(null);
+
+  private readonly saldoTotal = computed(() => calcularTotales(this.servicio.movimientos()).saldo);
 
   // ---- Formulario para agregar o editar ----
   protected readonly tipoNuevo = signal<TipoMovimiento>('gasto');
@@ -38,8 +58,15 @@ export class Movimientos {
     descripcion: ['', [Validators.required, Validators.maxLength(60)]],
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
     categoriaId: this.fb.control<number | null>(null, Validators.required),
-    fecha: [this.hoy, Validators.required],
+    fecha: [this.hoy, [Validators.required, noFutura]],
+    repetir: [false],
   });
+
+  // Categoría a elegir apenas lleguen las categorías (ej. "Saldo inicial" desde Inicio)
+  private categoriaPendiente: string | null = null;
+
+  // ---- Movimientos automáticos ----
+  protected readonly recurrentes = this.recurrentesService.recurrentes;
 
   // ---- Filtros de la lista ----
   protected readonly filtroMes = signal(''); // '' = todos los meses
@@ -62,12 +89,24 @@ export class Movimientos {
   constructor() {
     this.servicio.cargar();
     this.categoriasService.cargar();
+    this.recurrentesService.cargar();
 
-    // Cuando llegan las categorías o cambia el tipo, elige la primera si la actual no corresponde
+    // Llegó desde "Registrar saldo inicial"
+    if (this.ruta.snapshot.queryParamMap.has('saldoInicial')) {
+      this.tipoNuevo.set('ingreso');
+      this.categoriaPendiente = CATEGORIA_SALDO_INICIAL;
+      this.formulario.controls.descripcion.setValue('Saldo inicial');
+    }
+
+    // Cuando llegan las categorías o cambia el tipo, elige una categoría válida para ese tipo
     effect(() => {
       const opciones = this.categoriasNuevo();
       const control = this.formulario.controls.categoriaId;
-      if (!opciones.some((c) => c.id === control.value)) {
+      const pendiente = opciones.find((c) => c.nombre === this.categoriaPendiente);
+      if (pendiente) {
+        control.setValue(pendiente.id);
+        this.categoriaPendiente = null;
+      } else if (!opciones.some((c) => c.id === control.value)) {
         control.setValue(opciones[0]?.id ?? null);
       }
     });
@@ -111,6 +150,11 @@ export class Movimientos {
     this.tipoNuevo.set(tipo);
   }
 
+  // Día del mes en que se repetirá (el de la fecha elegida)
+  protected diaElegido(): number {
+    return Number(this.formulario.controls.fecha.value.slice(8, 10)) || new Date().getDate();
+  }
+
   // Muestra el error de un campo solo después de tocarlo o de intentar guardar
   protected tieneError(campo: keyof typeof this.formulario.controls): boolean {
     const control = this.formulario.controls[campo];
@@ -121,7 +165,7 @@ export class Movimientos {
     this.enviado.set(true);
     if (this.formulario.invalid || this.guardando()) return;
 
-    const { descripcion, monto, categoriaId, fecha } = this.formulario.getRawValue();
+    const { descripcion, monto, categoriaId, fecha, repetir } = this.formulario.getRawValue();
     const datos: DatosMovimiento = {
       descripcion: descripcion.trim(),
       monto: monto!,
@@ -129,16 +173,37 @@ export class Movimientos {
       fecha,
     };
     const editando = this.editando();
-    const peticion = editando
+
+    // Avisar (no bloquear) si el saldo total quedaría en negativo
+    const saldoNuevo =
+      this.saldoTotal() -
+      (editando ? efectoEnSaldo(editando.tipo, editando.monto) : 0) +
+      efectoEnSaldo(this.tipoNuevo(), datos.monto);
+    if (saldoNuevo < 0 && saldoNuevo < this.saldoTotal() && !this.confirmarSaldoNegativo(saldoNuevo)) {
+      return;
+    }
+
+    const automatico = repetir && !editando;
+    const peticion: Observable<unknown> = editando
       ? this.servicio.actualizar(editando.id, datos)
-      : this.servicio.agregar(datos);
+      : automatico
+        ? this.recurrentesService.crear(datos)
+        : this.servicio.agregar(datos);
 
     this.guardando.set(true);
     this.errorAccion.set(null);
+    this.aviso.set(null);
     peticion.subscribe({
       next: () => {
         this.guardando.set(false);
         this.editando.set(null);
+        if (automatico) {
+          // El backend ya registró el primer movimiento: se vuelve a cargar la lista
+          this.servicio.cargar();
+          this.aviso.set(
+            `"${datos.descripcion}" se registrará automáticamente el día ${Number(fecha.slice(8, 10))} de cada mes.`,
+          );
+        }
         this.limpiarFormulario(categoriaId);
       },
       error: (e) => {
@@ -156,6 +221,7 @@ export class Movimientos {
       monto: movimiento.monto,
       categoriaId: movimiento.categoriaId,
       fecha: movimiento.fecha,
+      repetir: false,
     });
     this.enviado.set(false);
     this.errorAccion.set(null);
@@ -168,7 +234,12 @@ export class Movimientos {
   }
 
   protected eliminar(movimiento: Movimiento): void {
-    if (!confirm(`¿Eliminar "${movimiento.descripcion}"?`)) return;
+    let pregunta = `¿Eliminar "${movimiento.descripcion}"?`;
+    const saldoNuevo = this.saldoTotal() - efectoEnSaldo(movimiento.tipo, movimiento.monto);
+    if (movimiento.tipo === 'ingreso' && saldoNuevo < 0) {
+      pregunta += `\n\nTu saldo quedará en S/ ${saldoNuevo.toFixed(2)}.`;
+    }
+    if (!confirm(pregunta)) return;
 
     this.errorAccion.set(null);
     this.servicio.eliminar(movimiento.id).subscribe({
@@ -178,6 +249,25 @@ export class Movimientos {
       error: (e) => this.errorAccion.set(mensajeDeError(e)),
     });
   }
+
+  // ---- Automáticos ----
+
+  protected alternarRecurrente(recurrente: Recurrente): void {
+    this.recurrentesService.cambiarEstado(recurrente, !recurrente.activo).subscribe({
+      next: () => this.servicio.cargar(),
+      error: (e) => this.errorAccion.set(mensajeDeError(e)),
+    });
+  }
+
+  protected eliminarRecurrente(recurrente: Recurrente): void {
+    const pregunta = `¿Dejar de registrar "${recurrente.descripcion}" cada mes?\n\nLos movimientos que ya se registraron se conservan.`;
+    if (!confirm(pregunta)) return;
+    this.recurrentesService.eliminar(recurrente.id).subscribe({
+      error: (e) => this.errorAccion.set(mensajeDeError(e)),
+    });
+  }
+
+  // ---- Filtros ----
 
   protected cambiarFiltroTipo(tipo: 'todos' | TipoMovimiento): void {
     this.filtroTipo.set(tipo);
@@ -203,9 +293,23 @@ export class Movimientos {
     this.busqueda.set('');
   }
 
+  private confirmarSaldoNegativo(saldo: number): boolean {
+    return confirm(
+      `Con este movimiento tu saldo quedaría en S/ ${saldo.toFixed(2)}.\n\n` +
+        '¿Te falta registrar algún ingreso o tu saldo inicial? Si el gasto es real, puedes guardarlo igual.\n\n' +
+        '¿Guardar de todos modos?',
+    );
+  }
+
   // Limpia el formulario pero mantiene el tipo y la categoría elegidos
   private limpiarFormulario(categoriaId = this.formulario.controls.categoriaId.value): void {
-    this.formulario.reset({ descripcion: '', monto: null, categoriaId, fecha: this.hoy });
+    this.formulario.reset({
+      descripcion: '',
+      monto: null,
+      categoriaId,
+      fecha: this.hoy,
+      repetir: false,
+    });
     this.enviado.set(false);
   }
 }

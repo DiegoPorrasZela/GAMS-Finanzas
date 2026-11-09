@@ -28,11 +28,52 @@
   </p>
 }
 
+<!-- Primer uso: registrar el dinero con el que empieza -->
+@if (sinMovimientos()) {
+  <section class="mt-6 rounded-xl border border-green-200 bg-green-50 p-6">
+    <h2 class="text-lg font-semibold text-green-900">¡Bienvenido a GAMS Finanzas! 👋</h2>
+    <p class="mt-1 text-sm text-green-800">
+      Empieza registrando tu <strong>saldo inicial</strong>: el dinero que tienes hoy, en efectivo y
+      en tu cuenta. Así tu saldo será real desde el primer día.
+    </p>
+    <a
+      routerLink="/movimientos"
+      [queryParams]="{ saldoInicial: 1 }"
+      class="mt-4 inline-block rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+    >
+      Registrar saldo inicial
+    </a>
+  </section>
+}
+
+<!-- Saldo negativo: avisar, no bloquear -->
+@if (!cargando() && saldoTotal() < 0) {
+  <p
+    role="alert"
+    class="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+  >
+    Tu saldo está en negativo (S/ {{ saldoTotal() | number: '1.2-2' }}): registraste más gastos que
+    ingresos. ¿Te falta registrar algún ingreso o el dinero con el que empezaste?
+    <a
+      routerLink="/movimientos"
+      [queryParams]="{ saldoInicial: 1 }"
+      class="font-semibold underline underline-offset-2"
+      >Registrar saldo inicial</a
+    >
+  </p>
+}
+
 <!-- Tarjetas de resumen -->
 <section class="mt-6 grid gap-4 sm:grid-cols-3">
   <article class="rounded-xl bg-gray-900 p-6 text-white shadow-md">
-    <p class="text-sm text-gray-400">Saldo total</p>
-    <p class="mt-2 text-3xl font-bold">S/ {{ saldoTotal() | number: '1.2-2' }}</p>
+    <p class="text-sm text-gray-400">Disponible para gastar</p>
+    <p class="mt-2 text-3xl font-bold" [class.text-red-400]="disponible() < 0">
+      S/ {{ disponible() | number: '1.2-2' }}
+    </p>
+    <p class="mt-2 text-xs text-gray-400">
+      Saldo S/ {{ saldoTotal() | number: '1.2-2' }} · En metas S/
+      {{ enMetas() | number: '1.2-2' }}
+    </p>
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -131,6 +172,31 @@
               />
             </div>
           </div>
+          @if (consejoPresupuesto(); as c) {
+            <div
+              class="rounded-md px-3 py-2 text-sm sm:col-span-2"
+              [class]="c.excede ? 'bg-amber-50 text-amber-800' : 'bg-gray-50 text-gray-600'"
+            >
+              @if (c.excede) {
+                <p class="mb-1 font-medium">
+                  Ojo: gastar y ahorrar suma S/ {{ c.total | number: '1.2-2' }}, más que tus
+                  ingresos de este mes.
+                </p>
+              }
+              <p>
+                Con tus ingresos registrados este mes (S/ {{ c.ingresos | number: '1.2-2' }}) y una
+                meta de ahorro de S/ {{ c.ahorro | number: '1.2-2' }}, puedes gastar hasta
+                <strong>S/ {{ c.sugerido | number: '1.2-2' }}</strong>.
+                <button
+                  type="button"
+                  (click)="usarSugerido()"
+                  class="font-semibold underline underline-offset-2"
+                >
+                  Usar este monto
+                </button>
+              </p>
+            </div>
+          }
           <div class="flex gap-2 sm:col-span-2">
             <button
               type="submit"

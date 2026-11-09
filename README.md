@@ -16,7 +16,12 @@ Tecnológica del Perú (UTP).
   lo gastado, avisa al pasar el 80 % o el límite, y calcula cuánto puedes gastar por día lo que queda del mes.
 - **Metas de ahorro:** objetivos como "Laptop, S/ 2500 para junio". Registras aportes, ves el porcentaje
   avanzado y cuánto ahorrar al mes para llegar a tiempo.
-- **Movimientos:** registrar, editar, eliminar, filtrar por mes, tipo o categoría y buscar.
+- **Movimientos:** registrar, editar, eliminar, filtrar por mes, tipo o categoría y buscar. No se aceptan
+  fechas futuras, y si un gasto deja el saldo en negativo la app avisa antes de guardarlo.
+- **Movimientos automáticos:** al registrar el sueldo, el alquiler o un plan, se marca "Repetir cada mes" y
+  la app lo registra sola cada mes. Se pueden pausar, reanudar o eliminar.
+- **Saldo disponible:** el dinero separado en metas no se cuenta como disponible para gastar, y no se puede
+  separar más de lo que se tiene. La categoría "Saldo inicial" registra con cuánto dinero se empieza.
 - **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública
   [Frankfurter](https://frankfurter.dev).
 - **Administración** (solo rol ADMIN): crear, editar y eliminar categorías, y gestionar las cuentas de usuario.

@@ -11,6 +11,20 @@ export interface Movimiento {
   tipo: TipoMovimiento;
   categoriaId: number;
   categoria: string; // nombre de la categoría
+  automatico: boolean; // lo registró un movimiento automático (ej. el sueldo)
+}
+
+// Ingreso o gasto que se registra solo cada mes
+export interface Recurrente {
+  id: number;
+  descripcion: string;
+  monto: number;
+  tipo: TipoMovimiento;
+  categoriaId: number;
+  categoria: string;
+  dia: number; // día del mes
+  proximoCargo: string; // próxima fecha en que se registrará
+  activo: boolean;
 }
 
 // Lo que se envía al crear o editar (el tipo lo define la categoría)

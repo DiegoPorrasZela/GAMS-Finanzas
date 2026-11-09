@@ -22,157 +22,251 @@
     <p class="mt-1 text-2xl font-bold text-red-600">S/ {{ totales().gastos | number: '1.2-2' }}</p>
   </article>
   <article class="rounded-xl bg-gray-900 p-5 text-white shadow-md">
-    <p class="text-sm text-gray-400">Balance</p>
-    <p class="mt-1 text-2xl font-bold">S/ {{ totales().saldo | number: '1.2-2' }}</p>
+    <p class="text-sm text-gray-400" title="Ingresos menos gastos de los movimientos mostrados">
+      Resultado del periodo
+    </p>
+    <p class="mt-1 text-2xl font-bold" [class.text-red-400]="totales().saldo < 0">
+      S/ {{ totales().saldo | number: '1.2-2' }}
+    </p>
+    <p class="mt-1 text-xs text-gray-400">
+      {{ totales().saldo < 0 ? 'Gastaste más de lo que ingresó' : 'Ingresos − gastos' }}
+    </p>
   </article>
 </section>
 
 <div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
-  <!-- Formulario (en celular va primero; en escritorio a la derecha) -->
-  <section
-    class="rounded-xl border bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1"
-    [class.border-gray-200]="!editando()"
-    [class.border-green-500]="editando()"
-  >
-    <h2 class="text-lg font-semibold text-gray-900">
-      {{ editando() ? 'Editar movimiento' : 'Nuevo movimiento' }}
-    </h2>
+  <!-- Columna derecha (en celular va primero) -->
+  <div class="space-y-6 lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1">
+    <!-- Formulario -->
+    <section
+      class="rounded-xl border bg-white p-6 shadow-sm"
+      [class.border-gray-200]="!editando()"
+      [class.border-green-500]="editando()"
+    >
+      <h2 class="text-lg font-semibold text-gray-900">
+        {{ editando() ? 'Editar movimiento' : 'Nuevo movimiento' }}
+      </h2>
 
-    <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate class="mt-4 space-y-4">
-      @if (errorAccion()) {
-        <p role="alert" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {{ errorAccion() }}
-        </p>
-      }
-
-      <!-- Tipo -->
-      <div class="grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1" role="group" aria-label="Tipo">
-        <button
-          type="button"
-          (click)="elegirTipo('gasto')"
-          [attr.aria-pressed]="tipoNuevo() === 'gasto'"
-          class="rounded py-2 text-sm font-medium text-gray-600 transition-colors"
-          [class.bg-white]="tipoNuevo() === 'gasto'"
-          [class.text-red-600!]="tipoNuevo() === 'gasto'"
-          [class.shadow-sm]="tipoNuevo() === 'gasto'"
-        >
-          ▼ Gasto
-        </button>
-        <button
-          type="button"
-          (click)="elegirTipo('ingreso')"
-          [attr.aria-pressed]="tipoNuevo() === 'ingreso'"
-          class="rounded py-2 text-sm font-medium text-gray-600 transition-colors"
-          [class.bg-white]="tipoNuevo() === 'ingreso'"
-          [class.text-green-600!]="tipoNuevo() === 'ingreso'"
-          [class.shadow-sm]="tipoNuevo() === 'ingreso'"
-        >
-          ▲ Ingreso
-        </button>
-      </div>
-
-      <!-- Descripción -->
-      <div>
-        <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
-        <input
-          id="descripcion"
-          type="text"
-          formControlName="descripcion"
-          placeholder="Ej. Menú del almuerzo"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-          [class.border-red-500!]="tieneError('descripcion')"
-        />
-        @if (tieneError('descripcion')) {
-          <p class="mt-1 text-xs text-red-600">Escribe una descripción (máx. 60 caracteres).</p>
+      <form [formGroup]="formulario" (ngSubmit)="guardar()" novalidate class="mt-4 space-y-4">
+        @if (errorAccion()) {
+          <p role="alert" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ errorAccion() }}
+          </p>
         }
-      </div>
-
-      <!-- Monto -->
-      <div>
-        <label for="monto" class="block text-sm font-medium text-gray-700">Monto</label>
-        <div class="relative mt-1">
-          <span
-            class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
-          >
-            S/
-          </span>
-          <input
-            id="monto"
-            type="number"
-            min="0.01"
-            step="0.01"
-            formControlName="monto"
-            placeholder="0.00"
-            class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-            [class.border-red-500!]="tieneError('monto')"
-          />
-        </div>
-        @if (tieneError('monto')) {
-          <p class="mt-1 text-xs text-red-600">Ingresa un monto mayor a 0.</p>
+        @if (aviso()) {
+          <p role="status" class="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+            🔁 {{ aviso() }}
+          </p>
         }
-      </div>
 
-      <!-- Categoría y fecha -->
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label for="categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
-          <select
-            id="categoria"
-            formControlName="categoriaId"
-            class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        <!-- Tipo -->
+        <div class="grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1" role="group" aria-label="Tipo">
+          <button
+            type="button"
+            (click)="elegirTipo('gasto')"
+            [attr.aria-pressed]="tipoNuevo() === 'gasto'"
+            class="rounded py-2 text-sm font-medium text-gray-600 transition-colors"
+            [class.bg-white]="tipoNuevo() === 'gasto'"
+            [class.text-red-600!]="tipoNuevo() === 'gasto'"
+            [class.shadow-sm]="tipoNuevo() === 'gasto'"
           >
-            @for (categoria of categoriasNuevo(); track categoria.id) {
-              <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
-            } @empty {
-              <option [ngValue]="null" disabled>Cargando…</option>
-            }
-          </select>
+            ▼ Gasto
+          </button>
+          <button
+            type="button"
+            (click)="elegirTipo('ingreso')"
+            [attr.aria-pressed]="tipoNuevo() === 'ingreso'"
+            class="rounded py-2 text-sm font-medium text-gray-600 transition-colors"
+            [class.bg-white]="tipoNuevo() === 'ingreso'"
+            [class.text-green-600!]="tipoNuevo() === 'ingreso'"
+            [class.shadow-sm]="tipoNuevo() === 'ingreso'"
+          >
+            ▲ Ingreso
+          </button>
         </div>
+
+        <!-- Descripción -->
         <div>
-          <label for="fecha" class="block text-sm font-medium text-gray-700">Fecha</label>
+          <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
           <input
-            id="fecha"
-            type="date"
-            [max]="hoy"
-            formControlName="fecha"
+            id="descripcion"
+            type="text"
+            formControlName="descripcion"
+            placeholder="Ej. Menú del almuerzo"
             class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-            [class.border-red-500!]="tieneError('fecha')"
+            [class.border-red-500!]="tieneError('descripcion')"
           />
+          @if (tieneError('descripcion')) {
+            <p class="mt-1 text-xs text-red-600">Escribe una descripción (máx. 60 caracteres).</p>
+          }
         </div>
-      </div>
 
-      <button
-        type="submit"
-        [disabled]="guardando()"
-        class="w-full rounded-md bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-wait disabled:opacity-70"
-      >
-        @if (guardando()) {
-          Guardando…
-        } @else if (editando()) {
-          Guardar cambios
-        } @else {
-          Agregar {{ tipoNuevo() }}
+        <!-- Monto -->
+        <div>
+          <label for="monto" class="block text-sm font-medium text-gray-700">Monto</label>
+          <div class="relative mt-1">
+            <span
+              class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+            >
+              S/
+            </span>
+            <input
+              id="monto"
+              type="number"
+              min="0.01"
+              step="0.01"
+              formControlName="monto"
+              placeholder="0.00"
+              class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              [class.border-red-500!]="tieneError('monto')"
+            />
+          </div>
+          @if (tieneError('monto')) {
+            <p class="mt-1 text-xs text-red-600">Ingresa un monto mayor a 0.</p>
+          }
+        </div>
+
+        <!-- Categoría y fecha -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
+            <select
+              id="categoria"
+              formControlName="categoriaId"
+              class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+            >
+              @for (categoria of categoriasNuevo(); track categoria.id) {
+                <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
+              } @empty {
+                <option [ngValue]="null" disabled>Cargando…</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="fecha" class="block text-sm font-medium text-gray-700">Fecha</label>
+            <input
+              id="fecha"
+              type="date"
+              [max]="hoy"
+              formControlName="fecha"
+              class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              [class.border-red-500!]="tieneError('fecha')"
+            />
+          </div>
+        </div>
+        @if (tieneError('fecha')) {
+          <p class="-mt-2 text-xs text-red-600">
+            {{
+              formulario.controls.fecha.hasError('futura')
+                ? 'La fecha no puede ser futura.'
+                : 'Elige una fecha.'
+            }}
+          </p>
         }
-      </button>
 
-      @if (editando()) {
+        <!-- Repetir cada mes (solo al crear) -->
+        @if (!editando()) {
+          <label class="flex cursor-pointer items-start gap-3 rounded-md bg-gray-50 p-3 text-sm">
+            <input
+              type="checkbox"
+              formControlName="repetir"
+              class="mt-0.5 size-4 accent-green-600"
+            />
+            <span>
+              <span class="font-medium text-gray-900">🔁 Repetir cada mes</span>
+              <span class="block text-gray-500">
+                Se registrará solo el día {{ diaElegido() }} de cada mes (ej. sueldo, alquiler).
+              </span>
+            </span>
+          </label>
+        }
+
         <button
-          type="button"
-          (click)="cancelarEdicion()"
-          class="w-full rounded-md border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+          type="submit"
+          [disabled]="guardando()"
+          class="w-full rounded-md bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-wait disabled:opacity-70"
         >
-          Cancelar edición
+          @if (guardando()) {
+            Guardando…
+          } @else if (editando()) {
+            Guardar cambios
+          } @else {
+            Agregar {{ tipoNuevo() }}
+          }
         </button>
-      }
-    </form>
-  </section>
+
+        @if (editando()) {
+          <button
+            type="button"
+            (click)="cancelarEdicion()"
+            class="w-full rounded-md border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Cancelar edición
+          </button>
+        }
+      </form>
+    </section>
+
+    <!-- Movimientos automáticos -->
+    <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="border-b border-gray-200 px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900">🔁 Automáticos</h2>
+        <p class="text-sm text-gray-500">Se registran solos cada mes.</p>
+      </div>
+      <ul class="divide-y divide-gray-100">
+        @for (recurrente of recurrentes(); track recurrente.id) {
+          <li class="px-6 py-3" [class.opacity-60]="!recurrente.activo">
+            <div class="flex items-baseline justify-between gap-2">
+              <p class="truncate font-medium text-gray-900">{{ recurrente.descripcion }}</p>
+              <p
+                class="shrink-0 text-sm font-semibold"
+                [class.text-green-600]="recurrente.tipo === 'ingreso'"
+                [class.text-red-600]="recurrente.tipo === 'gasto'"
+              >
+                {{ recurrente.tipo === 'ingreso' ? '+' : '-' }} S/
+                {{ recurrente.monto | number: '1.2-2' }}
+              </p>
+            </div>
+            <p class="text-xs text-gray-500">
+              Día {{ recurrente.dia }} de cada mes ·
+              @if (recurrente.activo) {
+                próximo: {{ recurrente.proximoCargo | date: 'dd/MM/yyyy' }}
+              } @else {
+                en pausa
+              }
+            </p>
+            <div class="mt-1 flex gap-3 text-xs">
+              <button
+                type="button"
+                (click)="alternarRecurrente(recurrente)"
+                class="font-medium text-gray-500 hover:text-green-700"
+              >
+                {{ recurrente.activo ? 'Pausar' : 'Reanudar' }}
+              </button>
+              <button
+                type="button"
+                (click)="eliminarRecurrente(recurrente)"
+                class="font-medium text-gray-500 hover:text-red-600"
+              >
+                Eliminar
+              </button>
+            </div>
+          </li>
+        } @empty {
+          <li class="px-6 py-6 text-center text-sm text-gray-500">
+            Marca "Repetir cada mes" al registrar tu sueldo o un gasto fijo.
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
 
   <!-- Lista -->
   <section
     class="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-2 lg:col-start-1 lg:row-start-1"
   >
     <!-- Filtros -->
-    <div class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-center">
+    <div class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:flex-wrap sm:items-center">
       <div
         class="inline-flex self-start rounded-md bg-gray-100 p-1"
         role="group"
@@ -229,7 +323,7 @@
       />
     </div>
 
-    <ul class="divide-y divide-gray-100">
+    <ul class="divide-y divide-gray-100" aria-label="Lista de movimientos">
       @for (movimiento of filtrados(); track movimiento.id) {
         <li
           class="group flex items-center gap-4 px-4 py-3 sm:px-6"
@@ -254,6 +348,13 @@
               <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
                 {{ movimiento.categoria }}
               </span>
+              @if (movimiento.automatico) {
+                <span
+                  class="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700"
+                  title="Registrado automáticamente"
+                  >🔁 Automático</span
+                >
+              }
               · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
             </p>
           </div>

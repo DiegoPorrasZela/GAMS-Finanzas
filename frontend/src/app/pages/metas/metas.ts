@@ -1,10 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Aporte, DatosMeta, MetaAhorro } from '../../models/finanzas.models';
 import { mensajeDeError } from '../../services/errores';
 import { MetasService } from '../../services/metas.service';
+import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { hoy, mesesHasta } from '../../utils/fechas';
+import { noFutura, noPasada } from '../../utils/validadores';
 
 @Component({
   imports: [ReactiveFormsModule, DatePipe, DecimalPipe],
@@ -13,13 +15,25 @@ import { hoy, mesesHasta } from '../../utils/fechas';
 })
 export class Metas {
   private readonly servicio = inject(MetasService);
+  private readonly movimientosService = inject(MovimientosService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
   protected readonly metas = this.servicio.metas;
   protected readonly cargando = this.servicio.cargando;
-  protected readonly errorCarga = this.servicio.error;
+  protected readonly errorCarga = computed(
+    () => this.servicio.error() ?? this.movimientosService.error(),
+  );
   protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
+
+  // Solo se puede separar el dinero que tienes y que no está ya en otra meta
+  protected readonly saldo = computed(
+    () => calcularTotales(this.movimientosService.movimientos()).saldo,
+  );
+  protected readonly enMetas = computed(() =>
+    this.metas().reduce((suma, meta) => suma + meta.ahorrado, 0),
+  );
+  protected readonly disponible = computed(() => this.saldo() - this.enMetas());
 
   // ---- Formulario de meta (crear o editar) ----
   protected readonly editando = signal<MetaAhorro | null>(null);
@@ -28,7 +42,7 @@ export class Metas {
   protected readonly formulario = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(60)]],
     montoObjetivo: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
-    fechaLimite: [''],
+    fechaLimite: ['', noPasada],
   });
 
   // ---- Aportes ----
@@ -36,11 +50,12 @@ export class Metas {
   protected readonly verAportesDe = signal<number | null>(null);
   protected readonly formAporte = this.fb.group({
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
-    fecha: [this.hoy, Validators.required],
+    fecha: [this.hoy, [Validators.required, noFutura]],
   });
 
   constructor() {
     this.servicio.cargar();
+    this.movimientosService.cargar();
   }
 
   protected tieneError(campo: keyof typeof this.formulario.controls): boolean {
@@ -123,6 +138,15 @@ export class Metas {
     if (this.formAporte.invalid) return;
 
     const { monto, fecha } = this.formAporte.getRawValue();
+    if (monto! > this.disponible()) {
+      this.mostrar(
+        this.disponible() > 0
+          ? `Solo tienes S/ ${this.disponible().toFixed(2)} disponibles para separar.`
+          : 'No tienes saldo disponible para separar: registra primero tus ingresos.',
+        true,
+      );
+      return;
+    }
     this.servicio.aportar(meta.id, { monto: monto!, fecha }).subscribe({
       next: (actualizada) => {
         this.aportandoA.set(null);
