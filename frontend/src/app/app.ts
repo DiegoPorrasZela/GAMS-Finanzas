@@ -27,6 +27,7 @@ export class App {
       ? [
           { ruta: '/', texto: 'Inicio', exacto: true },
           { ruta: '/movimientos', texto: 'Movimientos', exacto: false },
+          { ruta: '/metas', texto: 'Metas', exacto: false },
         ]
       : [];
     const publicos: Enlace[] = [

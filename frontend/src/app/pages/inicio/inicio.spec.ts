@@ -1,28 +1,80 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { mesActual } from '../../utils/fechas';
 import { Inicio } from './inicio';
 
+const api = environment.apiUrl;
+const mes = mesActual();
+const [anio, numeroMes] = mes.split('-').map(Number);
+
+const movimientos = [
+  { id: 1, descripcion: 'Pago de prácticas', monto: 1500, fecha: `${mes}-01`, tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo' },
+  { id: 2, descripcion: 'Menú', monto: 450, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
+  { id: 3, descripcion: 'Cine', monto: 50, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 11, categoria: 'Ocio' },
+  { id: 4, descripcion: 'Gasto antiguo', monto: 100, fecha: '2020-01-15', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
+];
+const metas = [
+  { id: 1, nombre: 'Laptop', montoObjetivo: 2500, fechaLimite: null, ahorrado: 550, faltante: 1950, porcentaje: 22, aportes: [] },
+];
+
 describe('Inicio', () => {
-  it('should show the totals of the user movements', async () => {
+  let fixture: ComponentFixture<Inicio>;
+  let http: HttpTestingController;
+  let texto: () => string;
+
+  async function crear(presupuestos: unknown[]) {
     await TestBed.configureTestingModule({
       imports: [Inicio],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(Inicio);
-    const http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${environment.apiUrl}/movimientos`).flush([
-      { id: 1, descripcion: 'Pago', monto: 1500, fecha: '2026-11-07', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo' },
-      { id: 2, descripcion: 'Menú', monto: 45, fecha: '2026-11-06', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
-    ]);
+    fixture = TestBed.createComponent(Inicio);
+    http = TestBed.inject(HttpTestingController);
+    texto = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    http.expectOne(`${api}/movimientos`).flush(movimientos);
+    http.expectOne(`${api}/presupuestos`).flush(presupuestos);
+    http.expectOne(`${api}/metas`).flush(metas);
+    await fixture.whenStable();
+  }
+
+  afterEach(() => http.verify());
+
+  it('should show the month totals, the budget alert and the spending by category', async () => {
+    await crear([{ anio, mes: numeroMes, limiteGasto: 600, ahorroObjetivo: 300 }]);
+
+    expect(texto()).toContain('900.00'); // saldo total (incluye el gasto antiguo)
+    expect(texto()).toContain('500.00'); // gastos del mes
+    expect(texto()).toContain('Cuidado: ya usaste el 83 %');
+    expect(texto()).toContain('Cumpliste tu meta de ahorro');
+    expect(texto()).toContain('90 %'); // Comida: 450 de 500
+    expect(texto()).toContain('Laptop');
+  });
+
+  it('should let the user define the budget of the month', async () => {
+    await crear([]);
+    expect(texto()).toContain('Aún no tienes presupuesto');
+
+    const boton = [...fixture.nativeElement.querySelectorAll('button')].find(
+      (b: HTMLButtonElement) => b.textContent?.trim() === 'Definir presupuesto',
+    ) as HTMLButtonElement;
+    boton.click();
     await fixture.whenStable();
 
-    const texto = (fixture.nativeElement as HTMLElement).textContent;
-    expect(texto).toContain('1,455.00'); // saldo
-    expect(texto).toContain('Menú');
-    http.verify();
+    const limite = fixture.nativeElement.querySelector('#limite') as HTMLInputElement;
+    limite.value = '800';
+    limite.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+
+    const peticion = http.expectOne({ method: 'PUT', url: `${api}/presupuestos/${anio}/${numeroMes}` });
+    expect(peticion.request.body).toEqual({ limiteGasto: 800, ahorroObjetivo: 0 });
+    peticion.flush({ anio, mes: numeroMes, limiteGasto: 800, ahorroObjetivo: 0 });
+    await fixture.whenStable();
+
+    expect(texto()).toContain('Gastaste');
+    expect(texto()).toContain('63 %'); // 500 de 800
   });
 });

@@ -1,7 +1,24 @@
-<section class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+<section class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
   <div>
     <h1 class="text-3xl font-bold text-gray-900">Hola, {{ nombre() }}</h1>
-    <p class="text-gray-500">Este es el resumen de tus ingresos y gastos.</p>
+    <p class="text-gray-500">Así van tus finanzas en {{ nombreDelMes() }}.</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <select
+      aria-label="Mes"
+      (change)="cambiarMes($event)"
+      class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+    >
+      @for (opcion of opcionesMes(); track opcion.clave) {
+        <option [value]="opcion.clave" [selected]="opcion.clave === mes()">{{ opcion.texto }}</option>
+      }
+    </select>
+    <a
+      routerLink="/movimientos"
+      class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+    >
+      + Registrar movimiento
+    </a>
   </div>
 </section>
 
@@ -14,82 +31,325 @@
 <!-- Tarjetas de resumen -->
 <section class="mt-6 grid gap-4 sm:grid-cols-3">
   <article class="rounded-xl bg-gray-900 p-6 text-white shadow-md">
-    <p class="text-sm text-gray-400">Saldo actual</p>
-    <p class="mt-2 text-3xl font-bold">S/ {{ saldo() | number: '1.2-2' }}</p>
+    <p class="text-sm text-gray-400">Saldo total</p>
+    <p class="mt-2 text-3xl font-bold">S/ {{ saldoTotal() | number: '1.2-2' }}</p>
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-    <p class="text-sm text-gray-500">Ingresos</p>
-    <p class="mt-2 text-3xl font-bold text-green-600">S/ {{ ingresos() | number: '1.2-2' }}</p>
+    <p class="text-sm text-gray-500">Ingresos del mes</p>
+    <p class="mt-2 text-3xl font-bold text-green-600">
+      S/ {{ totalesMes().ingresos | number: '1.2-2' }}
+    </p>
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-    <p class="text-sm text-gray-500">Gastos</p>
-    <p class="mt-2 text-3xl font-bold text-red-600">S/ {{ gastos() | number: '1.2-2' }}</p>
+    <p class="text-sm text-gray-500">Gastos del mes</p>
+    <p class="mt-2 text-3xl font-bold text-red-600">
+      S/ {{ totalesMes().gastos | number: '1.2-2' }}
+    </p>
   </article>
 </section>
 
-<div class="mt-8 grid gap-6 lg:grid-cols-3">
-  <!-- Últimos movimientos -->
-  <section class="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-2">
-    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-      <h2 class="text-lg font-semibold text-gray-900">Últimos movimientos</h2>
-      <a routerLink="/movimientos" class="text-sm font-medium text-green-600 hover:text-green-700">
-        Ver todos →
-      </a>
-    </div>
+<div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
+  <div class="space-y-6 lg:col-span-2">
+    <!-- Presupuesto del mes -->
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Mi presupuesto</h2>
+          <p class="text-sm text-gray-500">Cuánto puedes gastar y cuánto quieres ahorrar este mes.</p>
+        </div>
+        @if (presupuesto() && !editandoPresupuesto()) {
+          <div class="flex shrink-0 gap-3 text-sm">
+            <button
+              type="button"
+              (click)="abrirPresupuesto()"
+              class="font-medium text-gray-500 hover:text-green-700"
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              (click)="eliminarPresupuesto()"
+              class="font-medium text-gray-500 hover:text-red-600"
+            >
+              Eliminar
+            </button>
+          </div>
+        }
+      </div>
 
-    <ul class="divide-y divide-gray-100">
-      @for (movimiento of ultimos(); track movimiento.id) {
-        <li class="flex items-center justify-between px-6 py-4">
+      @if (errorPresupuesto()) {
+        <p role="alert" class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ errorPresupuesto() }}
+        </p>
+      }
+
+      @if (editandoPresupuesto()) {
+        <!-- Formulario -->
+        <form
+          [formGroup]="formPresupuesto"
+          (ngSubmit)="guardarPresupuesto()"
+          novalidate
+          class="mt-4 grid gap-4 sm:grid-cols-2"
+        >
           <div>
-            <p class="font-medium text-gray-900">{{ movimiento.descripcion }}</p>
-            <p class="text-sm text-gray-500">
-              {{ movimiento.categoria }} · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
+            <label for="limite" class="block text-sm font-medium text-gray-700"
+              >Gasto máximo del mes</label
+            >
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+              <input
+                id="limite"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="limiteGasto"
+                placeholder="800.00"
+                class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                [class.border-red-500!]="
+                  formPresupuesto.controls.limiteGasto.invalid &&
+                  formPresupuesto.controls.limiteGasto.touched
+                "
+              />
+            </div>
+          </div>
+          <div>
+            <label for="ahorro" class="block text-sm font-medium text-gray-700"
+              >Meta de ahorro del mes</label
+            >
+            <div class="relative mt-1">
+              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+              <input
+                id="ahorro"
+                type="number"
+                min="0"
+                step="0.01"
+                formControlName="ahorroObjetivo"
+                placeholder="200.00"
+                class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div class="flex gap-2 sm:col-span-2">
+            <button
+              type="submit"
+              [disabled]="guardandoPresupuesto()"
+              class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-70"
+            >
+              {{ guardandoPresupuesto() ? 'Guardando…' : 'Guardar presupuesto' }}
+            </button>
+            <button
+              type="button"
+              (click)="editandoPresupuesto.set(false)"
+              class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      } @else if (avance(); as a) {
+        <!-- Gasto contra el límite -->
+        <div class="mt-5">
+          <div class="flex items-baseline justify-between text-sm">
+            <p class="text-gray-700">
+              Gastaste <strong class="text-gray-900">S/ {{ a.gastos | number: '1.2-2' }}</strong>
+              de S/ {{ presupuesto()!.limiteGasto | number: '1.2-2' }}
             </p>
+            <span class="font-semibold text-gray-900">{{ a.porcentaje }} %</span>
+          </div>
+          <div class="mt-2 h-3 overflow-hidden rounded-full bg-gray-100">
+            <div
+              class="h-full rounded-full transition-all"
+              [class.bg-green-500]="a.estado === 'bien'"
+              [class.bg-amber-500]="a.estado === 'cuidado'"
+              [class.bg-red-500]="a.estado === 'excedido'"
+              [style.width.%]="a.porcentaje > 100 ? 100 : a.porcentaje"
+            ></div>
           </div>
           <p
-            class="font-semibold"
-            [class.text-green-600]="movimiento.tipo === 'ingreso'"
-            [class.text-red-600]="movimiento.tipo === 'gasto'"
+            class="mt-3 rounded-md px-3 py-2 text-sm"
+            [class]="
+              a.estado === 'excedido'
+                ? 'bg-red-50 text-red-700'
+                : a.estado === 'cuidado'
+                  ? 'bg-amber-50 text-amber-800'
+                  : 'bg-green-50 text-green-800'
+            "
           >
-            {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
-            {{ movimiento.monto | number: '1.2-2' }}
+            @if (a.estado === 'excedido') {
+              Superaste tu presupuesto por <strong>S/ {{ -a.restante | number: '1.2-2' }}</strong>.
+            } @else {
+              @if (a.estado === 'cuidado') {
+                Cuidado: ya usaste el {{ a.porcentaje }} % de tu presupuesto.
+              } @else {
+                Vas bien.
+              }
+              Te quedan <strong>S/ {{ a.restante | number: '1.2-2' }}</strong>
+              @if (a.porDia) {
+                : puedes gastar unos <strong>S/ {{ a.porDia | number: '1.2-2' }} por día</strong>
+                durante los {{ a.dias }} días que quedan.
+              } @else {
+                .
+              }
+            }
           </p>
-        </li>
-      } @empty {
-        <li class="px-6 py-10 text-center text-sm text-gray-500">
-          @if (cargando()) {
-            Cargando movimientos…
-          } @else {
-            Aún no tienes movimientos.
-            <a routerLink="/movimientos" class="font-medium text-green-600 hover:text-green-700">
-              Registra el primero
-            </a>
-          }
-        </li>
+        </div>
+
+        <!-- Ahorro contra la meta del mes -->
+        @if (a.porcentajeAhorro !== null) {
+          <div class="mt-6 border-t border-gray-100 pt-5">
+            <div class="flex items-baseline justify-between text-sm">
+              <p class="text-gray-700">
+                Ahorro del mes:
+                <strong class="text-gray-900">S/ {{ a.ahorro | number: '1.2-2' }}</strong>
+                de S/ {{ presupuesto()!.ahorroObjetivo | number: '1.2-2' }}
+              </p>
+              <span class="font-semibold text-gray-900">{{ a.porcentajeAhorro }} %</span>
+            </div>
+            <div class="mt-2 h-3 overflow-hidden rounded-full bg-gray-100">
+              <div
+                class="h-full rounded-full bg-sky-500 transition-all"
+                [style.width.%]="a.porcentajeAhorro > 100 ? 100 : a.porcentajeAhorro"
+              ></div>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">
+              @if (a.porcentajeAhorro >= 100) {
+                🎉 ¡Cumpliste tu meta de ahorro de este mes!
+              } @else if (a.ahorro < 0) {
+                Este mes gastaste más de lo que ingresó.
+              } @else {
+                Te faltan S/
+                {{ presupuesto()!.ahorroObjetivo - a.ahorro | number: '1.2-2' }} para tu meta.
+              }
+              <span class="text-gray-400">(ahorro = ingresos − gastos del mes)</span>
+            </p>
+          </div>
+        }
+      } @else {
+        <!-- Sin presupuesto -->
+        <div class="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-center">
+          <p class="text-gray-700">Aún no tienes presupuesto para {{ nombreDelMes() }}.</p>
+          <p class="mt-1 text-sm text-gray-500">
+            Define cuánto quieres gastar como máximo y te avisamos cuando te acerques al límite.
+          </p>
+          <button
+            type="button"
+            (click)="abrirPresupuesto()"
+            class="mt-4 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          >
+            Definir presupuesto
+          </button>
+        </div>
       }
-    </ul>
-  </section>
+    </section>
 
-  <!-- Accesos rápidos -->
-  <section class="flex flex-col gap-4">
-    <h2 class="text-lg font-semibold text-gray-900">Accesos rápidos</h2>
+    <!-- Gastos por categoría -->
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-gray-900">¿En qué se va tu dinero?</h2>
+      <p class="text-sm text-gray-500">Gastos de {{ nombreDelMes() }} por categoría.</p>
 
-    <a
-      routerLink="/movimientos"
-      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-green-500 hover:shadow-md"
-    >
-      <p class="font-semibold text-gray-900">Registrar movimiento</p>
-      <p class="mt-1 text-sm text-gray-500">Anota un ingreso o un gasto.</p>
-    </a>
+      <ul class="mt-5 space-y-4">
+        @for (item of gastosPorCategoria(); track item.categoria) {
+          <li>
+            <div class="flex items-baseline justify-between text-sm">
+              <span class="font-medium text-gray-900">{{ item.categoria }}</span>
+              <span class="text-gray-500">
+                S/ {{ item.monto | number: '1.2-2' }} ·
+                <span class="font-semibold text-gray-900">{{ item.porcentaje }} %</span>
+              </span>
+            </div>
+            <div class="mt-1.5 h-2.5 overflow-hidden rounded-full bg-gray-100">
+              <div class="h-full rounded-full" [class]="item.color" [style.width.%]="item.ancho"></div>
+            </div>
+          </li>
+        } @empty {
+          <li class="py-6 text-center text-sm text-gray-500">
+            No registraste gastos en {{ nombreDelMes() }}.
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
 
-    <a
-      routerLink="/tipo-cambio"
-      class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-green-500 hover:shadow-md"
-    >
-      <p class="font-semibold text-gray-900">Tipo de cambio</p>
-      <p class="mt-1 text-sm text-gray-500">Consulta el dólar (USD → PEN) de hoy.</p>
-    </a>
-  </section>
+  <div class="space-y-6">
+    <!-- Metas de ahorro -->
+    <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900">Metas de ahorro</h2>
+        <a routerLink="/metas" class="text-sm font-medium text-green-600 hover:text-green-700">
+          Ver todas →
+        </a>
+      </div>
+      <ul class="divide-y divide-gray-100">
+        @for (meta of metas(); track meta.id) {
+          <li class="px-6 py-4">
+            <div class="flex items-baseline justify-between gap-2 text-sm">
+              <span class="truncate font-medium text-gray-900">{{ meta.nombre }}</span>
+              <span class="shrink-0 font-semibold text-gray-900">{{ meta.porcentaje }} %</span>
+            </div>
+            <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100">
+              <div
+                class="h-full rounded-full bg-green-500"
+                [style.width.%]="meta.porcentaje > 100 ? 100 : meta.porcentaje"
+              ></div>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">
+              S/ {{ meta.ahorrado | number: '1.2-2' }} de S/
+              {{ meta.montoObjetivo | number: '1.2-2' }}
+            </p>
+          </li>
+        } @empty {
+          <li class="px-6 py-8 text-center text-sm text-gray-500">
+            Aún no tienes metas.
+            <a routerLink="/metas" class="font-medium text-green-600 hover:text-green-700">
+              Crea la primera
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- Últimos movimientos del mes -->
+    <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900">Últimos movimientos</h2>
+        <a routerLink="/movimientos" class="text-sm font-medium text-green-600 hover:text-green-700">
+          Ver todos →
+        </a>
+      </div>
+
+      <ul class="divide-y divide-gray-100">
+        @for (movimiento of ultimos(); track movimiento.id) {
+          <li class="flex items-center justify-between gap-3 px-6 py-3">
+            <div class="min-w-0">
+              <p class="truncate font-medium text-gray-900">{{ movimiento.descripcion }}</p>
+              <p class="text-xs text-gray-500">
+                {{ movimiento.categoria }} · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
+              </p>
+            </div>
+            <p
+              class="shrink-0 text-sm font-semibold"
+              [class.text-green-600]="movimiento.tipo === 'ingreso'"
+              [class.text-red-600]="movimiento.tipo === 'gasto'"
+            >
+              {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
+              {{ movimiento.monto | number: '1.2-2' }}
+            </p>
+          </li>
+        } @empty {
+          <li class="px-6 py-8 text-center text-sm text-gray-500">
+            @if (cargando()) {
+              Cargando movimientos…
+            } @else {
+              Sin movimientos en {{ nombreDelMes() }}.
+              <a routerLink="/movimientos" class="font-medium text-green-600 hover:text-green-700">
+                Registra uno
+              </a>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
 </div>

@@ -5,14 +5,7 @@ import { DatosMovimiento, Movimiento, TipoMovimiento } from '../../models/finanz
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
-
-// Fecha de hoy en formato AAAA-MM-DD (hora local)
-function hoy(): string {
-  const fecha = new Date();
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-  const dia = String(fecha.getDate()).padStart(2, '0');
-  return `${fecha.getFullYear()}-${mes}-${dia}`;
-}
+import { capitalizar, hoy, mesesConDatos, nombreMes } from '../../utils/fechas';
 
 @Component({
   imports: [ReactiveFormsModule, DatePipe, DecimalPipe],
@@ -49,6 +42,13 @@ export class Movimientos {
   });
 
   // ---- Filtros de la lista ----
+  protected readonly filtroMes = signal(''); // '' = todos los meses
+  protected readonly opcionesMes = computed(() =>
+    mesesConDatos(this.servicio.movimientos().map((m) => m.fecha)).map((clave) => ({
+      clave,
+      texto: capitalizar(nombreMes(clave)),
+    })),
+  );
   protected readonly filtroTipo = signal<'todos' | TipoMovimiento>('todos');
   protected readonly filtroCategoria = signal('');
   protected readonly busqueda = signal('');
@@ -84,12 +84,14 @@ export class Movimientos {
   });
 
   protected readonly filtrados = computed(() => {
+    const mes = this.filtroMes();
     const tipo = this.filtroTipo();
     const categoria = this.filtroCategoria();
     const texto = this.busqueda().trim().toLowerCase();
 
     return this.servicio
       .movimientos()
+      .filter((m) => !mes || m.fecha.startsWith(mes))
       .filter((m) => tipo === 'todos' || m.tipo === tipo)
       .filter((m) => !categoria || m.categoria === categoria)
       .filter((m) => !texto || m.descripcion.toLowerCase().includes(texto));
@@ -98,7 +100,11 @@ export class Movimientos {
   protected readonly totales = computed(() => calcularTotales(this.filtrados()));
 
   protected readonly hayFiltros = computed(
-    () => this.filtroTipo() !== 'todos' || this.filtroCategoria() !== '' || this.busqueda() !== '',
+    () =>
+      this.filtroMes() !== '' ||
+      this.filtroTipo() !== 'todos' ||
+      this.filtroCategoria() !== '' ||
+      this.busqueda() !== '',
   );
 
   protected elegirTipo(tipo: TipoMovimiento): void {
@@ -178,6 +184,10 @@ export class Movimientos {
     this.filtroCategoria.set('');
   }
 
+  protected cambiarMes(evento: Event): void {
+    this.filtroMes.set((evento.target as HTMLSelectElement).value);
+  }
+
   protected cambiarCategoria(evento: Event): void {
     this.filtroCategoria.set((evento.target as HTMLSelectElement).value);
   }
@@ -187,6 +197,7 @@ export class Movimientos {
   }
 
   protected limpiarFiltros(): void {
+    this.filtroMes.set('');
     this.filtroTipo.set('todos');
     this.filtroCategoria.set('');
     this.busqueda.set('');

@@ -4,6 +4,7 @@ import { Acerca } from './pages/acerca/acerca';
 import { Admin } from './pages/admin/admin';
 import { Inicio } from './pages/inicio/inicio';
 import { Login } from './pages/login/login';
+import { Metas } from './pages/metas/metas';
 import { Movimientos } from './pages/movimientos/movimientos';
 import { Registro } from './pages/registro/registro';
 import { TipoCambio } from './pages/tipo-cambio/tipo-cambio';
@@ -20,6 +21,12 @@ export const routes: Routes = [
     component: Movimientos,
     canActivate: [autenticadoGuard],
     title: 'Movimientos | GAMS Finanzas',
+  },
+  {
+    path: 'metas',
+    component: Metas,
+    canActivate: [autenticadoGuard],
+    title: 'Metas de ahorro | GAMS Finanzas',
   },
 
   // Solo administradores

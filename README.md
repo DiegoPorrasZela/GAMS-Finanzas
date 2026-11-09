@@ -10,8 +10,13 @@ Tecnológica del Perú (UTP).
 ## Funcionalidades
 
 - **Cuentas de usuario:** registro, inicio y cierre de sesión. La sesión dura 8 horas (token JWT).
-- **Inicio:** saldo, ingresos, gastos y últimos movimientos del usuario.
-- **Movimientos:** registrar, editar, eliminar, filtrar por tipo o categoría y buscar.
+- **Inicio (resumen del mes):** saldo total, ingresos y gastos del mes elegido, gráfico de gastos por
+  categoría ("¿en qué se va tu dinero?") y últimos movimientos.
+- **Mi presupuesto:** defines cuánto quieres gastar como máximo y cuánto ahorrar cada mes. Una barra muestra
+  lo gastado, avisa al pasar el 80 % o el límite, y calcula cuánto puedes gastar por día lo que queda del mes.
+- **Metas de ahorro:** objetivos como "Laptop, S/ 2500 para junio". Registras aportes, ves el porcentaje
+  avanzado y cuánto ahorrar al mes para llegar a tiempo.
+- **Movimientos:** registrar, editar, eliminar, filtrar por mes, tipo o categoría y buscar.
 - **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública
   [Frankfurter](https://frankfurter.dev).
 - **Administración** (solo rol ADMIN): crear, editar y eliminar categorías, y gestionar las cuentas de usuario.
@@ -41,8 +46,9 @@ frontend/src/
 │   ├── guards/         Protegen las rutas según la sesión y el rol
 │   ├── interceptors/   Agregan el token JWT a cada petición al backend
 │   ├── models/         Tipos de datos (Movimiento, Categoria, Usuario)
-│   ├── pages/          Pantallas: inicio, movimientos, tipo-cambio, admin, login, registro, acerca
-│   └── services/       Comunicación con el API y estado de la sesión
+│   ├── pages/          Pantallas: inicio, movimientos, metas, tipo-cambio, admin, login, registro, acerca
+│   ├── services/       Comunicación con el API y estado de la sesión
+│   └── utils/          Ayudas para fechas y meses
 └── environments/       URL del API en desarrollo y en producción
 ```
 
@@ -51,7 +57,7 @@ frontend/src/
 | Ruta | Acceso |
 |---|---|
 | `/login`, `/registro` | Solo sin sesión |
-| `/` (Inicio), `/movimientos` | Con sesión |
+| `/` (Inicio), `/movimientos`, `/metas` | Con sesión |
 | `/admin` | Solo ADMIN |
 | `/tipo-cambio`, `/acerca` | Público |
 

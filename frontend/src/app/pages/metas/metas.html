@@ -1,0 +1,267 @@
+<section>
+  <h1 class="text-3xl font-bold text-gray-900">Metas de ahorro</h1>
+  <p class="text-gray-500">Ponle nombre a lo que quieres lograr y registra lo que vas separando.</p>
+</section>
+
+@if (errorCarga()) {
+  <p role="alert" class="mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+    {{ errorCarga() }}
+  </p>
+}
+@if (mensaje(); as aviso) {
+  <p
+    role="status"
+    class="mt-6 rounded-md px-4 py-3 text-sm"
+    [class]="aviso.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'"
+  >
+    {{ aviso.texto }}
+  </p>
+}
+
+<div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+  <!-- Formulario (en celular va primero; en escritorio a la derecha) -->
+  <section
+    class="rounded-xl border bg-white p-6 shadow-sm lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1"
+    [class.border-gray-200]="!editando()"
+    [class.border-green-500]="editando()"
+  >
+    <h2 class="text-lg font-semibold text-gray-900">
+      {{ editando() ? 'Editar meta' : 'Nueva meta' }}
+    </h2>
+
+    <form [formGroup]="formulario" (ngSubmit)="guardarMeta()" novalidate class="mt-4 space-y-4">
+      <div>
+        <label for="nombre-meta" class="block text-sm font-medium text-gray-700">¿Para qué ahorras?</label>
+        <input
+          id="nombre-meta"
+          type="text"
+          formControlName="nombre"
+          placeholder="Ej. Laptop para la universidad"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneError('nombre')"
+        />
+        @if (tieneError('nombre')) {
+          <p class="mt-1 text-xs text-red-600">Escribe un nombre (máx. 60 caracteres).</p>
+        }
+      </div>
+
+      <div>
+        <label for="objetivo" class="block text-sm font-medium text-gray-700">Monto objetivo</label>
+        <div class="relative mt-1">
+          <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+          <input
+            id="objetivo"
+            type="number"
+            min="0.01"
+            step="0.01"
+            formControlName="montoObjetivo"
+            placeholder="0.00"
+            class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+            [class.border-red-500!]="tieneError('montoObjetivo')"
+          />
+        </div>
+        @if (tieneError('montoObjetivo')) {
+          <p class="mt-1 text-xs text-red-600">Ingresa un monto mayor a 0.</p>
+        }
+      </div>
+
+      <div>
+        <label for="fecha-limite" class="block text-sm font-medium text-gray-700">
+          Fecha límite <span class="font-normal text-gray-400">(opcional)</span>
+        </label>
+        <input
+          id="fecha-limite"
+          type="date"
+          formControlName="fechaLimite"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        />
+        <p class="mt-1 text-xs text-gray-500">Con fecha te decimos cuánto ahorrar cada mes.</p>
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="guardando()"
+        class="w-full rounded-md bg-green-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-70"
+      >
+        {{ guardando() ? 'Guardando…' : editando() ? 'Guardar cambios' : 'Crear meta' }}
+      </button>
+      @if (editando()) {
+        <button
+          type="button"
+          (click)="cancelarEdicion()"
+          class="w-full rounded-md border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          Cancelar edición
+        </button>
+      }
+    </form>
+  </section>
+
+  <!-- Lista de metas -->
+  <section class="space-y-4 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+    @for (meta of metas(); track meta.id) {
+      <article
+        class="rounded-xl border bg-white p-6 shadow-sm"
+        [class.border-gray-200]="editando()?.id !== meta.id"
+        [class.border-green-500]="editando()?.id === meta.id"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h2 class="truncate text-lg font-semibold text-gray-900">
+              {{ meta.porcentaje >= 100 ? '🎉 ' : '' }}{{ meta.nombre }}
+            </h2>
+            <p class="text-sm text-gray-500">
+              Objetivo: S/ {{ meta.montoObjetivo | number: '1.2-2' }}
+              @if (meta.fechaLimite) {
+                · hasta el {{ meta.fechaLimite | date: 'dd/MM/yyyy' }}
+              }
+            </p>
+          </div>
+          <div class="flex shrink-0 gap-3 text-sm">
+            <button type="button" (click)="editarMeta(meta)" class="font-medium text-gray-500 hover:text-green-700">
+              Editar
+            </button>
+            <button type="button" (click)="eliminarMeta(meta)" class="font-medium text-gray-500 hover:text-red-600">
+              Eliminar
+            </button>
+          </div>
+        </div>
+
+        <!-- Avance -->
+        <div class="mt-4">
+          <div class="flex items-baseline justify-between text-sm">
+            <p class="text-gray-700">
+              Ahorraste <strong class="text-gray-900">S/ {{ meta.ahorrado | number: '1.2-2' }}</strong>
+            </p>
+            <span class="font-semibold text-gray-900">{{ meta.porcentaje }} %</span>
+          </div>
+          <div class="mt-2 h-3 overflow-hidden rounded-full bg-gray-100">
+            <div
+              class="h-full rounded-full bg-green-500 transition-all"
+              [style.width.%]="meta.porcentaje > 100 ? 100 : meta.porcentaje"
+            ></div>
+          </div>
+          <p class="mt-2 text-sm text-gray-600">
+            @if (meta.faltante <= 0) {
+              ¡Meta cumplida! Ya juntaste todo lo que necesitabas.
+            } @else if (sugerencia(meta); as s) {
+              @if (s.vencida) {
+                La fecha límite ya pasó y te faltan S/ {{ meta.faltante | number: '1.2-2' }}.
+                Puedes editar la meta para ponerle una nueva fecha.
+              } @else {
+                Te faltan S/ {{ meta.faltante | number: '1.2-2' }}: ahorra unos
+                <strong>S/ {{ s.porMes | number: '1.2-2' }} al mes</strong> durante
+                {{ s.meses }} {{ s.meses === 1 ? 'mes' : 'meses' }} para llegar a tiempo.
+              }
+            } @else {
+              Te faltan S/ {{ meta.faltante | number: '1.2-2' }}.
+            }
+          </p>
+        </div>
+
+        <!-- Acciones de aportes -->
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            (click)="abrirAporte(meta)"
+            class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          >
+            + Aportar
+          </button>
+          @if (meta.aportes.length > 0) {
+            <button
+              type="button"
+              (click)="alternarAportes(meta)"
+              class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {{ verAportesDe() === meta.id ? 'Ocultar' : 'Ver' }} aportes ({{ meta.aportes.length }})
+            </button>
+          }
+        </div>
+
+        @if (aportandoA() === meta.id) {
+          <form
+            [formGroup]="formAporte"
+            (ngSubmit)="guardarAporte(meta)"
+            novalidate
+            class="mt-4 flex flex-col gap-3 rounded-lg bg-gray-50 p-4 sm:flex-row sm:items-end"
+          >
+            <div class="flex-1">
+              <label [for]="'monto-aporte-' + meta.id" class="block text-sm font-medium text-gray-700">Monto</label>
+              <div class="relative mt-1">
+                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+                <input
+                  [id]="'monto-aporte-' + meta.id"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  formControlName="monto"
+                  placeholder="0.00"
+                  class="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+                  [class.border-red-500!]="formAporte.controls.monto.invalid && formAporte.controls.monto.touched"
+                />
+              </div>
+            </div>
+            <div>
+              <label [for]="'fecha-aporte-' + meta.id" class="block text-sm font-medium text-gray-700">Fecha</label>
+              <input
+                [id]="'fecha-aporte-' + meta.id"
+                type="date"
+                [max]="hoy"
+                formControlName="fecha"
+                class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              />
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="submit"
+                class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                (click)="aportandoA.set(null)"
+                class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        }
+
+        @if (verAportesDe() === meta.id) {
+          <ul class="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200">
+            @for (aporte of meta.aportes; track aporte.id) {
+              <li class="flex items-center justify-between px-4 py-2 text-sm">
+                <span class="text-gray-500">{{ aporte.fecha | date: 'dd/MM/yyyy' }}</span>
+                <span class="flex items-center gap-3">
+                  <span class="font-semibold text-green-600">+ S/ {{ aporte.monto | number: '1.2-2' }}</span>
+                  <button
+                    type="button"
+                    (click)="quitarAporte(meta, aporte)"
+                    [attr.aria-label]="'Eliminar aporte de ' + aporte.monto"
+                    class="text-gray-400 hover:text-red-600"
+                  >
+                    ✕
+                  </button>
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </article>
+    } @empty {
+      <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+        @if (cargando()) {
+          <p class="text-gray-500">Cargando metas…</p>
+        } @else {
+          <p class="font-medium text-gray-900">Todavía no tienes metas de ahorro.</p>
+          <p class="mt-1 text-sm text-gray-500">
+            Crea una con el formulario: por ejemplo, una laptop, un viaje o un fondo de emergencia.
+          </p>
+        }
+      </div>
+    }
+  </section>
+</div>

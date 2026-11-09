@@ -194,6 +194,19 @@
       </div>
 
       <select
+        aria-label="Filtrar por mes"
+        (change)="cambiarMes($event)"
+        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+      >
+        <option value="" [selected]="filtroMes() === ''">Todos los meses</option>
+        @for (opcion of opcionesMes(); track opcion.clave) {
+          <option [value]="opcion.clave" [selected]="filtroMes() === opcion.clave">
+            {{ opcion.texto }}
+          </option>
+        }
+      </select>
+
+      <select
         aria-label="Filtrar por categoría"
         (change)="cambiarCategoria($event)"
         class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
