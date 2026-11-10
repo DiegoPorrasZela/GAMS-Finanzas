@@ -2,7 +2,7 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { DatosMovimiento, Recurrente, TipoMovimiento } from '../models/finanzas.models';
+import { DatosMovimiento, Frecuencia, Recurrente, TipoMovimiento } from '../models/finanzas.models';
 import { AuthService } from './auth.service';
 import { mensajeDeError } from './errores';
 
@@ -46,9 +46,9 @@ export class RecurrentesService {
     });
   }
 
-  // La fecha es la del primer registro y define el día de cada mes
-  crear(datos: DatosMovimiento): Observable<Recurrente> {
-    return this.http.post<RecurrenteApi>(this.api, datos).pipe(
+  // La fecha es la del primer registro y define el día en que se repite (del mes o de la semana)
+  crear(datos: DatosMovimiento, frecuencia: Frecuencia = 'MENSUAL'): Observable<Recurrente> {
+    return this.http.post<RecurrenteApi>(this.api, { ...datos, frecuencia }).pipe(
       map(desdeApi),
       tap((nuevo) => this.lista.update((lista) => [...lista, nuevo])),
     );

@@ -58,7 +58,7 @@ describe('Movimientos', () => {
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
     expect(peticion.request.body).toMatchObject({ descripcion: 'Sueldo', monto: 1200, categoriaId: 6 });
-    peticion.flush({ id: 1, descripcion: 'Sueldo', monto: 1200, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', dia: 9, proximoCargo: '2099-01-09', activo: true });
+    peticion.flush({ id: 1, descripcion: 'Sueldo', monto: 1200, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', frecuencia: 'MENSUAL', dia: 9, proximoCargo: '2099-01-09', activo: true });
     // El backend ya registró el primer movimiento: la lista se vuelve a cargar
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     await fixture.whenStable();

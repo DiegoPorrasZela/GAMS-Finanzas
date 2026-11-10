@@ -103,14 +103,14 @@
 }
 
 <!-- Tarjetas de resumen -->
-<section class="mt-6 grid gap-4 sm:grid-cols-3">
+<section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
   <article class="rounded-xl bg-gray-900 p-6 text-white shadow-md">
     <p class="text-sm text-gray-400">Disponible para gastar</p>
-    <p class="mt-2 text-3xl font-bold" [class.text-red-400]="disponible() < 0">
-      S/ {{ disponible() | number: '1.2-2' }}
+    <p class="mt-2 text-3xl font-bold" [class.text-red-400]="saldoTotal() < 0">
+      S/ {{ saldoTotal() | number: '1.2-2' }}
     </p>
     <p class="mt-2 text-xs text-gray-400">
-      Saldo S/ {{ saldoTotal() | number: '1.2-2' }} · En metas S/
+      🐷 En ahorros S/ {{ enAhorros() | number: '1.2-2' }} · En metas S/
       {{ enMetas() | number: '1.2-2' }}
     </p>
   </article>
@@ -128,6 +128,16 @@
       S/ {{ totalesMes().gastos | number: '1.2-2' }}
     </p>
   </article>
+
+  <a
+    routerLink="/metas"
+    class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-sky-400"
+  >
+    <p class="text-sm text-gray-500">🐷 Ahorrado del mes</p>
+    <p class="mt-2 text-3xl font-bold text-sky-700">
+      S/ {{ totalesMes().ahorro | number: '1.2-2' }}
+    </p>
+  </a>
 </section>
 
 <div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
@@ -322,12 +332,15 @@
               @if (a.porcentajeAhorro >= 100) {
                 🎉 ¡Cumpliste tu meta de ahorro de este mes!
               } @else if (a.ahorro < 0) {
-                Este mes gastaste más de lo que ingresó.
+                Este mes retiraste de tus ahorros más de lo que separaste.
               } @else {
                 Te faltan S/
                 {{ presupuesto()!.ahorroObjetivo - a.ahorro | number: '1.2-2' }} para tu meta.
+                <a routerLink="/metas" class="font-medium text-sky-700 underline underline-offset-2"
+                  >Separar a ahorros</a
+                >
               }
-              <span class="text-gray-400">(ahorro = ingresos − gastos del mes)</span>
+              <span class="text-gray-400">(lo que separaste a tus ahorros este mes)</span>
             </p>
           </div>
         }
@@ -433,12 +446,14 @@
                 {{ movimiento.categoria }} · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
               </p>
             </div>
+            @let deAhorros = clasificar(movimiento) === 'ahorro' || clasificar(movimiento) === 'retiro';
             <p
               class="shrink-0 text-sm font-semibold"
-              [class.text-green-600]="movimiento.tipo === 'ingreso'"
-              [class.text-red-600]="movimiento.tipo === 'gasto'"
+              [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
+              [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
+              [class.text-sky-700]="deAhorros"
             >
-              {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
+              {{ deAhorros ? '🐷' : '' }} {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
               {{ movimiento.monto | number: '1.2-2' }}
             </p>
           </li>

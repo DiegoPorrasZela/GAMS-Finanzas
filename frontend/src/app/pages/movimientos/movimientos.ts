@@ -4,16 +4,20 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Observable } from 'rxjs';
 import {
   DatosMovimiento,
+  Frecuencia,
   Movimiento,
   Recurrente,
   TipoMovimiento,
+  clasificar,
+  esAhorro,
+  esRetiro,
   esSaldoInicial,
 } from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
-import { capitalizar, hoy, mesesConDatos, nombreMes } from '../../utils/fechas';
+import { capitalizar, hoy, mesesConDatos, nombreMes, textoFrecuencia } from '../../utils/fechas';
 import { noFutura } from '../../utils/validadores';
 
 // Efecto de un movimiento en el saldo: suma si es ingreso, resta si es gasto
@@ -49,14 +53,19 @@ export class Movimientos {
   private readonly saldoInicialRegistrado = computed(
     () => this.servicio.movimientos().find(esSaldoInicial) ?? null,
   );
+  // Ahorros y retiros se manejan desde Metas: aquí solo aparecen al editar uno de esos movimientos
   protected readonly categoriasNuevo = computed(() => {
     const registrado = this.saldoInicialRegistrado();
     const editando = this.editando();
     return this.categoriasService
       .categorias()
       .filter((c) => c.tipo === this.tipoNuevo())
-      .filter((c) => !esSaldoInicial(c) || !registrado || editando?.id === registrado.id);
+      .filter((c) => !esSaldoInicial(c) || !registrado || editando?.id === registrado.id)
+      .filter((c) => !(esAhorro(c) || esRetiro(c)) || editando?.categoriaId === c.id);
   });
+
+  protected readonly clasificar = clasificar;
+  protected readonly textoFrecuencia = textoFrecuencia;
   protected readonly enviado = signal(false);
   protected readonly guardando = signal(false);
 
@@ -66,6 +75,7 @@ export class Movimientos {
     categoriaId: this.fb.control<number | null>(null, Validators.required),
     fecha: [this.hoy, [Validators.required, noFutura]],
     repetir: [false],
+    frecuencia: this.fb.control<Frecuencia>('MENSUAL'),
   });
 
   // ---- Movimientos automáticos ----
@@ -149,9 +159,15 @@ export class Movimientos {
     return !!categoria && esSaldoInicial(categoria);
   }
 
-  // Día del mes en que se repetirá (el de la fecha elegida)
-  protected diaElegido(): number {
-    return Number(this.formulario.controls.fecha.value.slice(8, 10)) || new Date().getDate();
+  // "cada día", "cada semana (lunes)", "el día 9 de cada mes", según la fecha y la frecuencia elegidas
+  protected repeticionElegida(): string {
+    const { fecha, frecuencia } = this.formulario.getRawValue();
+    const texto = textoFrecuencia({
+      frecuencia,
+      dia: Number(fecha.slice(8, 10)) || new Date().getDate(),
+      proximoCargo: fecha || this.hoy,
+    });
+    return frecuencia === 'MENSUAL' ? `el ${texto.toLowerCase()}` : texto.toLowerCase();
   }
 
   // Muestra el error de un campo solo después de tocarlo o de intentar guardar
@@ -164,7 +180,8 @@ export class Movimientos {
     this.enviado.set(true);
     if (this.formulario.invalid || this.guardando()) return;
 
-    const { descripcion, monto, categoriaId, fecha, repetir } = this.formulario.getRawValue();
+    const { descripcion, monto, categoriaId, fecha, repetir, frecuencia } =
+      this.formulario.getRawValue();
     const datos: DatosMovimiento = {
       descripcion: descripcion.trim(),
       monto: monto!,
@@ -186,8 +203,9 @@ export class Movimientos {
     const peticion: Observable<unknown> = editando
       ? this.servicio.actualizar(editando.id, datos)
       : automatico
-        ? this.recurrentesService.crear(datos)
+        ? this.recurrentesService.crear(datos, frecuencia)
         : this.servicio.agregar(datos);
+    const repeticion = this.repeticionElegida();
 
     this.guardando.set(true);
     this.errorAccion.set(null);
@@ -199,9 +217,7 @@ export class Movimientos {
         if (automatico) {
           // El backend ya registró el primer movimiento: se vuelve a cargar la lista
           this.servicio.cargar();
-          this.aviso.set(
-            `"${datos.descripcion}" se registrará automáticamente el día ${Number(fecha.slice(8, 10))} de cada mes.`,
-          );
+          this.aviso.set(`"${datos.descripcion}" se registrará automáticamente ${repeticion}.`);
         }
         this.limpiarFormulario(categoriaId);
       },
@@ -221,6 +237,7 @@ export class Movimientos {
       categoriaId: movimiento.categoriaId,
       fecha: movimiento.fecha,
       repetir: false,
+      frecuencia: 'MENSUAL',
     });
     this.enviado.set(false);
     this.errorAccion.set(null);
@@ -308,6 +325,7 @@ export class Movimientos {
       categoriaId,
       fecha: this.hoy,
       repetir: false,
+      frecuencia: 'MENSUAL',
     });
     this.enviado.set(false);
   }

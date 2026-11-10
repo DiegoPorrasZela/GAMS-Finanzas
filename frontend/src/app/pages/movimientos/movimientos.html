@@ -10,7 +10,7 @@
 }
 
 <!-- Resumen (respeta los filtros) -->
-<section class="mt-6 grid gap-4 sm:grid-cols-3">
+<section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
   <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
     <p class="text-sm text-gray-500">Ingresos</p>
     <p class="mt-1 text-2xl font-bold text-green-600">
@@ -21,15 +21,22 @@
     <p class="text-sm text-gray-500">Gastos</p>
     <p class="mt-1 text-2xl font-bold text-red-600">S/ {{ totales().gastos | number: '1.2-2' }}</p>
   </article>
+  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <p class="text-sm text-gray-500">🐷 Ahorrado</p>
+    <p class="mt-1 text-2xl font-bold text-sky-700">S/ {{ totales().ahorro | number: '1.2-2' }}</p>
+  </article>
   <article class="rounded-xl bg-gray-900 p-5 text-white shadow-md">
-    <p class="text-sm text-gray-400" title="Ingresos menos gastos de los movimientos mostrados">
+    <p
+      class="text-sm text-gray-400"
+      title="Todo lo que entró a tu saldo menos todo lo que salió (incluye ahorros y saldo inicial)"
+    >
       Resultado del periodo
     </p>
     <p class="mt-1 text-2xl font-bold" [class.text-red-400]="totales().saldo < 0">
       S/ {{ totales().saldo | number: '1.2-2' }}
     </p>
     <p class="mt-1 text-xs text-gray-400">
-      {{ totales().saldo < 0 ? 'Gastaste más de lo que ingresó' : 'Ingresos − gastos' }}
+      {{ totales().saldo < 0 ? 'Salió más dinero del que entró' : 'Lo que entró − lo que salió' }}
     </p>
   </article>
 </section>
@@ -164,21 +171,39 @@
           </p>
         }
 
-        <!-- Repetir cada mes (solo al crear, y nunca para el saldo inicial) -->
+        <!-- Repetir automáticamente (solo al crear, y nunca para el saldo inicial) -->
         @if (!editando() && !esSaldoInicialElegido()) {
-          <label class="flex cursor-pointer items-start gap-3 rounded-md bg-gray-50 p-3 text-sm">
-            <input
-              type="checkbox"
-              formControlName="repetir"
-              class="mt-0.5 size-4 accent-green-600"
-            />
-            <span>
-              <span class="font-medium text-gray-900">🔁 Repetir cada mes</span>
-              <span class="block text-gray-500">
-                Se registrará solo el día {{ diaElegido() }} de cada mes (ej. sueldo, alquiler).
+          <div class="rounded-md bg-gray-50 p-3 text-sm">
+            <label class="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                formControlName="repetir"
+                class="mt-0.5 size-4 accent-green-600"
+              />
+              <span>
+                <span class="font-medium text-gray-900">🔁 Repetir automáticamente</span>
+                <span class="block text-gray-500">
+                  @if (formulario.controls.repetir.value) {
+                    Se registrará solo {{ repeticionElegida() }}.
+                  } @else {
+                    Para el sueldo, el alquiler o un plan que se repite.
+                  }
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+            @if (formulario.controls.repetir.value) {
+              <label for="frecuencia" class="sr-only">Frecuencia</label>
+              <select
+                id="frecuencia"
+                formControlName="frecuencia"
+                class="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              >
+                <option value="MENSUAL">Cada mes</option>
+                <option value="SEMANAL">Cada semana</option>
+                <option value="DIARIA">Cada día</option>
+              </select>
+            }
+          </div>
         }
 
         <button
@@ -228,7 +253,7 @@
               </p>
             </div>
             <p class="text-xs text-gray-500">
-              Día {{ recurrente.dia }} de cada mes ·
+              {{ textoFrecuencia(recurrente) }} ·
               @if (recurrente.activo) {
                 próximo: {{ recurrente.proximoCargo | date: 'dd/MM/yyyy' }}
               } @else {
@@ -329,17 +354,21 @@
           class="group flex items-center gap-4 px-4 py-3 sm:px-6"
           [class.bg-green-50]="editando()?.id === movimiento.id"
         >
-          <!-- Ícono por tipo -->
+          <!-- Ícono: ingreso ▲, gasto ▼, ahorro o retiro 🐷 -->
+          @let clase = clasificar(movimiento);
+          @let deAhorros = clase === 'ahorro' || clase === 'retiro';
           <span
             class="flex size-9 shrink-0 items-center justify-center rounded-full text-sm"
             [class]="
-              movimiento.tipo === 'ingreso'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-700'
+              deAhorros
+                ? 'bg-sky-100 text-sky-700'
+                : movimiento.tipo === 'ingreso'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
             "
             aria-hidden="true"
           >
-            {{ movimiento.tipo === 'ingreso' ? '▲' : '▼' }}
+            {{ deAhorros ? '🐷' : movimiento.tipo === 'ingreso' ? '▲' : '▼' }}
           </span>
 
           <div class="min-w-0 flex-1">
@@ -361,8 +390,9 @@
 
           <p
             class="shrink-0 font-semibold"
-            [class.text-green-600]="movimiento.tipo === 'ingreso'"
-            [class.text-red-600]="movimiento.tipo === 'gasto'"
+            [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
+            [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
+            [class.text-sky-700]="deAhorros"
           >
             {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
             {{ movimiento.monto | number: '1.2-2' }}

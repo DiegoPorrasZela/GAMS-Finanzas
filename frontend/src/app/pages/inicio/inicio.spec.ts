@@ -15,9 +15,11 @@ const movimientos = [
   { id: 2, descripcion: 'Menú', monto: 450, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
   { id: 3, descripcion: 'Cine', monto: 50, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 11, categoria: 'Ocio' },
   { id: 4, descripcion: 'Gasto antiguo', monto: 100, fecha: '2020-01-15', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
+  // Separado a ahorros: sale del saldo, pero no es un gasto (cuenta como ahorro del mes)
+  { id: 5, descripcion: 'Ahorro', monto: 300, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro' },
 ];
 const metas = [
-  { id: 1, nombre: 'Laptop', montoObjetivo: 2500, fechaLimite: null, ahorrado: 550, faltante: 1950, porcentaje: 22, aportes: [] },
+  { id: 1, nombre: 'Laptop', montoObjetivo: 2500, fechaLimite: null, ahorrado: 250, faltante: 2250, porcentaje: 10, aportes: [] },
 ];
 
 describe('Inicio', () => {
@@ -72,7 +74,7 @@ describe('Inicio', () => {
 
     // Ya tiene saldo inicial: la tarjeta desaparece
     expect(texto()).not.toContain('¿Con cuánto dinero empezaste?');
-    expect(texto()).toContain('1,250.00'); // saldo: 900 + 350
+    expect(texto()).toContain('950.00'); // saldo: 600 + 350
   });
 
   it('should hide the initial balance card when the user starts without money', async () => {
@@ -89,11 +91,12 @@ describe('Inicio', () => {
   it('should show the month totals, the budget alert and the spending by category', async () => {
     await crear([{ anio, mes: numeroMes, limiteGasto: 600, ahorroObjetivo: 300 }]);
 
-    expect(texto()).toContain('900.00'); // saldo total (incluye el gasto antiguo)
-    expect(texto()).toContain('500.00'); // gastos del mes
-    expect(texto()).toContain('Cuidado: ya usaste el 83 %');
-    expect(texto()).toContain('Cumpliste tu meta de ahorro');
-    expect(texto()).toContain('90 %'); // Comida: 450 de 500
+    expect(texto()).toContain('600.00'); // disponible: 1500 − 450 − 50 − 100 − 300 separados
+    expect(texto()).toContain('En ahorros S/ 50.00'); // 300 separados − 250 en metas
+    expect(texto()).toContain('500.00'); // gastos del mes: el ahorro NO cuenta como gasto
+    expect(texto()).toContain('Cuidado: ya usaste el 83 %'); // 500 de 600
+    expect(texto()).toContain('Cumpliste tu meta de ahorro'); // separó 300 de 300
+    expect(texto()).toContain('90 %'); // Comida: 450 de 500 (el ahorro no aparece en el gráfico)
     expect(texto()).toContain('Laptop');
   });
 

@@ -9,22 +9,165 @@
   </p>
 }
 
-<!-- Cuánto se puede separar -->
-<section class="mt-6 grid gap-4 sm:grid-cols-3">
-  <article class="rounded-xl bg-gray-900 p-5 text-white shadow-md">
-    <p class="text-sm text-gray-400">Disponible para separar</p>
-    <p class="mt-1 text-2xl font-bold" [class.text-red-400]="disponible() < 0">
-      S/ {{ disponible() | number: '1.2-2' }}
-    </p>
-  </article>
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-    <p class="text-sm text-gray-500">Ya separado en metas</p>
-    <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
-  </article>
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-    <p class="text-sm text-gray-500">Tu saldo</p>
-    <p class="mt-1 text-2xl font-bold text-gray-900">S/ {{ saldo() | number: '1.2-2' }}</p>
-  </article>
+<!-- Mis ahorros: Saldo → Ahorros → Metas -->
+<section class="mt-6 rounded-xl border border-sky-200 bg-white shadow-sm">
+  <div
+    class="flex flex-col gap-4 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">🐷 Mis ahorros</h2>
+      <p class="text-sm text-gray-500">
+        Separa dinero de tu saldo y desde aquí repártelo a tus metas.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        (click)="abrirAccion('separar')"
+        class="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+      >
+        + Separar a ahorros
+      </button>
+      <button
+        type="button"
+        (click)="abrirAccion('retirar')"
+        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+      >
+        Retirar
+      </button>
+    </div>
+  </div>
+
+  <div class="grid gap-6 p-6 sm:grid-cols-3">
+    <div>
+      <p class="text-sm text-gray-500">Libres en tus ahorros</p>
+      <p class="mt-1 text-2xl font-bold text-sky-700" [class.text-red-600!]="libres() < 0">
+        S/ {{ libres() | number: '1.2-2' }}
+      </p>
+      <p class="text-xs text-gray-400">Para aportar a tus metas o retirar</p>
+    </div>
+    <div>
+      <p class="text-sm text-gray-500">En tus metas</p>
+      <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
+      <p class="text-xs text-gray-400">Ya repartido entre tus metas</p>
+    </div>
+    <div>
+      <p class="text-sm text-gray-500">Total ahorrado</p>
+      <p class="mt-1 text-2xl font-bold text-gray-900">
+        S/ {{ totalAhorrado() | number: '1.2-2' }}
+      </p>
+      <p class="text-xs text-gray-400">Tu saldo para gastar: S/ {{ saldo() | number: '1.2-2' }}</p>
+    </div>
+  </div>
+
+  @if (accion(); as tipo) {
+    <form
+      [formGroup]="formAhorro"
+      (ngSubmit)="guardarAhorro()"
+      novalidate
+      class="border-t border-gray-200 bg-gray-50 p-6"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div class="sm:w-48">
+          <label for="monto-ahorro" class="block text-sm font-medium text-gray-700">
+            {{ tipo === 'separar' ? '¿Cuánto separas?' : '¿Cuánto retiras?' }}
+          </label>
+          <div class="relative mt-1">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+            <input
+              id="monto-ahorro"
+              type="number"
+              min="0.01"
+              step="0.01"
+              formControlName="monto"
+              placeholder="0.00"
+              class="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 focus:outline-none"
+              [class.border-red-500!]="formAhorro.controls.monto.invalid && formAhorro.controls.monto.touched"
+            />
+          </div>
+        </div>
+        @if (tipo === 'separar') {
+          <div>
+            <label for="frecuencia-ahorro" class="block text-sm font-medium text-gray-700">
+              ¿Cada cuánto?
+            </label>
+            <select
+              id="frecuencia-ahorro"
+              formControlName="frecuencia"
+              class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 focus:outline-none"
+            >
+              <option value="UNA_VEZ">Solo esta vez</option>
+              <option value="DIARIA">🔁 Cada día</option>
+              <option value="SEMANAL">🔁 Cada semana</option>
+              <option value="MENSUAL">🔁 Cada mes</option>
+            </select>
+          </div>
+        }
+        <div class="flex gap-2">
+          <button
+            type="submit"
+            [disabled]="guardandoAhorro()"
+            class="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+          >
+            {{ guardandoAhorro() ? 'Guardando…' : tipo === 'separar' ? 'Separar' : 'Retirar' }}
+          </button>
+          <button
+            type="button"
+            (click)="accion.set(null)"
+            class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-gray-500">
+        @if (tipo === 'separar') {
+          Sale de tu saldo (S/ {{ saldo() | number: '1.2-2' }}) y aparece en Movimientos como
+          "🐷 Ahorro". No cuenta como gasto: cuenta como ahorro.
+        } @else {
+          Vuelve a tu saldo. Puedes retirar hasta S/ {{ libres() | number: '1.2-2' }}: lo que ya está
+          en tus metas no se retira (primero quita el aporte).
+        }
+      </p>
+    </form>
+  }
+
+  @if (ahorrosAutomaticos().length > 0) {
+    <ul class="divide-y divide-gray-100 border-t border-gray-200">
+      @for (recurrente of ahorrosAutomaticos(); track recurrente.id) {
+        <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 text-sm" [class.opacity-60]="!recurrente.activo">
+          <span class="text-gray-700">
+            🔁 <strong>S/ {{ recurrente.monto | number: '1.2-2' }}</strong>
+            {{ textoFrecuencia(recurrente).toLowerCase() }}
+            <span class="text-gray-400">
+              ·
+              @if (recurrente.activo) {
+                próximo: {{ recurrente.proximoCargo | date: 'dd/MM/yyyy' }}
+              } @else {
+                en pausa
+              }
+            </span>
+          </span>
+          <span class="flex gap-3 text-xs">
+            <button
+              type="button"
+              (click)="alternarAhorroAutomatico(recurrente)"
+              class="font-medium text-gray-500 hover:text-sky-700"
+            >
+              {{ recurrente.activo ? 'Pausar' : 'Reanudar' }}
+            </button>
+            <button
+              type="button"
+              (click)="eliminarAhorroAutomatico(recurrente)"
+              class="font-medium text-gray-500 hover:text-red-600"
+            >
+              Eliminar
+            </button>
+          </span>
+        </li>
+      }
+    </ul>
+  }
 </section>
 @if (mensaje(); as aviso) {
   <p
@@ -241,6 +384,7 @@
               <button
                 type="submit"
                 class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                [title]="'Sale de tus ahorros libres (S/ ' + (libres() | number: '1.2-2') + ')'"
               >
                 Guardar
               </button>
@@ -253,6 +397,9 @@
               </button>
             </div>
           </form>
+          <p class="mt-2 text-xs text-gray-500">
+            El aporte sale de tus ahorros libres (S/ {{ libres() | number: '1.2-2' }}).
+          </p>
         }
 
         @if (verAportesDe() === meta.id) {

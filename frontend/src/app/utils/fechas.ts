@@ -23,6 +23,19 @@ export function nombreMes(clave: string): string {
   );
 }
 
+// "Cada día", "Cada semana (lunes)", "Día 9 de cada mes"
+export function textoFrecuencia(r: { frecuencia: string; dia: number; proximoCargo: string }): string {
+  if (r.frecuencia === 'DIARIA') return 'Cada día';
+  if (r.frecuencia === 'SEMANAL') {
+    const [anio, mes, dia] = r.proximoCargo.split('-').map(Number);
+    const diaSemana = new Intl.DateTimeFormat('es-PE', { weekday: 'long' }).format(
+      new Date(anio, mes - 1, dia),
+    );
+    return `Cada semana (${diaSemana})`;
+  }
+  return `Día ${r.dia} de cada mes`;
+}
+
 export function capitalizar(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }

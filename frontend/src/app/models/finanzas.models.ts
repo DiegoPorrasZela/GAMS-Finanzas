@@ -3,11 +3,34 @@
 
 export type TipoMovimiento = 'ingreso' | 'gasto';
 
-// Categoría del sistema para el dinero con el que empieza el usuario (se registra una sola vez)
-export const CATEGORIA_SALDO_INICIAL = 'Saldo inicial';
+// Categorías del sistema (el backend no deja editarlas ni eliminarlas)
+export const CATEGORIA_SALDO_INICIAL = 'Saldo inicial'; // dinero con el que empieza (una sola vez)
+export const CATEGORIA_AHORRO = 'Ahorro'; // sale del saldo hacia los ahorros
+export const CATEGORIA_RETIRO = 'Retiro de ahorros'; // vuelve de los ahorros al saldo
 
-export const esSaldoInicial = (item: { categoria?: string; nombre?: string; tipo: TipoMovimiento }) =>
-  item.tipo === 'ingreso' && (item.categoria ?? item.nombre) === CATEGORIA_SALDO_INICIAL;
+type ConCategoria = { categoria?: string; nombre?: string; tipo: TipoMovimiento };
+const nombreDe = (item: ConCategoria) => item.categoria ?? item.nombre;
+
+export const esSaldoInicial = (item: ConCategoria) =>
+  item.tipo === 'ingreso' && nombreDe(item) === CATEGORIA_SALDO_INICIAL;
+export const esAhorro = (item: ConCategoria) =>
+  item.tipo === 'gasto' && nombreDe(item) === CATEGORIA_AHORRO;
+export const esRetiro = (item: ConCategoria) =>
+  item.tipo === 'ingreso' && nombreDe(item) === CATEGORIA_RETIRO;
+export const esCategoriaDelSistema = (item: ConCategoria) =>
+  esSaldoInicial(item) || esAhorro(item) || esRetiro(item);
+
+// Qué es realmente un movimiento: el ahorro sale del saldo pero NO es un gasto,
+// y el saldo inicial o un retiro de ahorros entran al saldo pero NO son ingresos ganados
+export type Clase = 'ingreso' | 'gasto' | 'ahorro' | 'retiro' | 'saldoInicial';
+export function clasificar(item: ConCategoria): Clase {
+  if (esAhorro(item)) return 'ahorro';
+  if (esRetiro(item)) return 'retiro';
+  if (esSaldoInicial(item)) return 'saldoInicial';
+  return item.tipo;
+}
+
+export type Frecuencia = 'DIARIA' | 'SEMANAL' | 'MENSUAL';
 
 export interface Movimiento {
   id: number;
@@ -20,7 +43,7 @@ export interface Movimiento {
   automatico: boolean; // lo registró un movimiento automático (ej. el sueldo)
 }
 
-// Ingreso o gasto que se registra solo cada mes
+// Ingreso, gasto o ahorro que se registra solo cada día, semana o mes
 export interface Recurrente {
   id: number;
   descripcion: string;
@@ -28,7 +51,8 @@ export interface Recurrente {
   tipo: TipoMovimiento;
   categoriaId: number;
   categoria: string;
-  dia: number; // día del mes
+  frecuencia: Frecuencia;
+  dia: number; // día del mes (frecuencia mensual)
   proximoCargo: string; // próxima fecha en que se registrará
   activo: boolean;
 }

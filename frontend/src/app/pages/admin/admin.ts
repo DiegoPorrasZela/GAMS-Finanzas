@@ -1,6 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Categoria, TipoMovimiento, Usuario, esSaldoInicial } from '../../models/finanzas.models';
+import {
+  Categoria,
+  TipoMovimiento,
+  Usuario,
+  esCategoriaDelSistema,
+} from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
@@ -29,8 +34,8 @@ export class Admin {
       { titulo: 'Gastos', lista: categorias.filter((c) => c.tipo === 'gasto') },
     ];
   });
-  // "Saldo inicial" es del sistema: el backend no deja editarla ni eliminarla
-  protected readonly esDelSistema = (categoria: Categoria) => esSaldoInicial(categoria);
+  // Saldo inicial, Ahorro y Retiro de ahorros son del sistema: el backend no deja editarlas ni eliminarlas
+  protected readonly esDelSistema = (categoria: Categoria) => esCategoriaDelSistema(categoria);
   protected readonly editando = signal<Categoria | null>(null);
   protected readonly enviado = signal(false);
   protected readonly guardando = signal(false);

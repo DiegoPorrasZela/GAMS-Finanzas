@@ -2,7 +2,12 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { DatosMovimiento, Movimiento, TipoMovimiento } from '../models/finanzas.models';
+import {
+  DatosMovimiento,
+  Movimiento,
+  TipoMovimiento,
+  clasificar,
+} from '../models/finanzas.models';
 import { AuthService } from './auth.service';
 import { mensajeDeError } from './errores';
 
@@ -16,13 +21,34 @@ const desdeApi = (m: MovimientoApi): Movimiento => ({
   tipo: m.tipo.toLowerCase() as TipoMovimiento,
 });
 
-// Suma ingresos, gastos y saldo de una lista (se usa en Inicio y en Movimientos)
+// Totales de una lista (se usa en Inicio, Movimientos y Metas):
+// - ingresos: lo ganado (sin saldo inicial ni retiros de ahorros)
+// - gastos: lo consumido (sin lo que se separó a ahorros)
+// - ahorro: lo separado a ahorros menos lo retirado
+// - saldo: cómo cambió el dinero disponible (todo lo que entró menos todo lo que salió)
 export function calcularTotales(lista: Movimiento[]) {
-  const sumar = (tipo: TipoMovimiento) =>
-    lista.filter((m) => m.tipo === tipo).reduce((total, m) => total + m.monto, 0);
-  const ingresos = sumar('ingreso');
-  const gastos = sumar('gasto');
-  return { ingresos, gastos, saldo: ingresos - gastos };
+  let ingresos = 0;
+  let gastos = 0;
+  let ahorro = 0;
+  let saldo = 0;
+  for (const m of lista) {
+    saldo += m.tipo === 'ingreso' ? m.monto : -m.monto;
+    switch (clasificar(m)) {
+      case 'ingreso':
+        ingresos += m.monto;
+        break;
+      case 'gasto':
+        gastos += m.monto;
+        break;
+      case 'ahorro':
+        ahorro += m.monto;
+        break;
+      case 'retiro':
+        ahorro -= m.monto;
+        break;
+    }
+  }
+  return { ingresos, gastos, ahorro, saldo };
 }
 
 // CRUD de movimientos contra el backend. Mantiene una copia local en una signal

@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { CATEGORIA_SALDO_INICIAL, esSaldoInicial } from '../../models/finanzas.models';
+import { CATEGORIA_SALDO_INICIAL, clasificar, esSaldoInicial } from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
@@ -74,14 +74,15 @@ export class Inicio {
   private readonly movimientosDelMes = computed(() =>
     this.movimientosService.movimientos().filter((m) => m.fecha.startsWith(this.mes())),
   );
-  protected readonly saldoTotal = computed(
-    () => calcularTotales(this.movimientosService.movimientos()).saldo,
+  private readonly totalesTodos = computed(() =>
+    calcularTotales(this.movimientosService.movimientos()),
   );
-  // El dinero separado en metas sigue en tu saldo, pero ya no está disponible para gastar
+  // Lo separado a ahorros ya salió del saldo: todo el saldo está disponible para gastar
+  protected readonly saldoTotal = computed(() => this.totalesTodos().saldo);
   protected readonly enMetas = computed(() =>
     this.metasService.metas().reduce((suma, meta) => suma + meta.ahorrado, 0),
   );
-  protected readonly disponible = computed(() => this.saldoTotal() - this.enMetas());
+  protected readonly enAhorros = computed(() => this.totalesTodos().ahorro - this.enMetas());
   protected readonly sinMovimientos = computed(
     () =>
       !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
@@ -104,11 +105,13 @@ export class Inicio {
   });
   protected readonly totalesMes = computed(() => calcularTotales(this.movimientosDelMes()));
   protected readonly ultimos = computed(() => this.movimientosDelMes().slice(0, 5));
+  protected readonly clasificar = clasificar;
 
   // ---- Gastos por categoría (gráfico de barras) ----
   protected readonly gastosPorCategoria = computed(() => {
     const totales = new Map<string, number>();
-    for (const m of this.movimientosDelMes().filter((m) => m.tipo === 'gasto')) {
+    // Solo gastos de consumo: lo separado a ahorros no es un gasto
+    for (const m of this.movimientosDelMes().filter((m) => clasificar(m) === 'gasto')) {
       totales.set(m.categoria, (totales.get(m.categoria) ?? 0) + m.monto);
     }
     const totalGastos = [...totales.values()].reduce((suma, monto) => suma + monto, 0);
@@ -136,11 +139,11 @@ export class Inicio {
     const presupuesto = this.presupuesto();
     if (!presupuesto) return null;
 
-    const { ingresos, gastos } = this.totalesMes();
+    // ahorro = lo que separaste a tus ahorros este mes (menos lo que retiraste)
+    const { gastos, ahorro } = this.totalesMes();
     const porcentaje = Math.round((gastos * 100) / presupuesto.limiteGasto);
     const restante = presupuesto.limiteGasto - gastos;
     const dias = this.esMesActual() ? diasRestantesDelMes() : null;
-    const ahorro = ingresos - gastos;
 
     return {
       gastos,
