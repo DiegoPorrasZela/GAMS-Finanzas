@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
+import { ToastService } from '../../services/toast.service';
 import { Metas } from './metas';
 
 const api = environment.apiUrl;
@@ -26,6 +27,8 @@ describe('Metas', () => {
     input.value = valor;
     input.dispatchEvent(new Event('input'));
   };
+  // Mensajes que se mostraron como notificaciones flotantes
+  const notificaciones = () => TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' | ');
   const boton = (texto: string) =>
     [...pagina.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
 
@@ -70,7 +73,7 @@ describe('Metas', () => {
     pagina.querySelectorAll('form')[1].dispatchEvent(new Event('submit'));
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('En tus ahorros tienes S/ 1450.00 libres');
+    expect(notificaciones()).toContain('En tus ahorros tienes S/ 1450.00 libres');
     // No se envió nada al backend (http.verify() lo comprueba)
   });
 
@@ -85,7 +88,7 @@ describe('Metas', () => {
     peticion.flush({ id: 3, descripcion: 'Ahorro', monto: 200, fecha: '2026-11-09', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false });
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('Separaste S/ 200.00 a tus ahorros');
+    expect(notificaciones()).toContain('Separaste S/ 200.00 a tus ahorros');
     expect(pagina.textContent).toContain('1,650.00'); // libres: 1450 + 200
   });
 
@@ -105,7 +108,7 @@ describe('Metas', () => {
     http.expectOne(`${api}/movimientos`).flush([]);
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('Se separarán S/ 25.00 a tus ahorros cada semana');
+    expect(notificaciones()).toContain('Se separarán S/ 25.00 a tus ahorros cada semana');
   });
 
   it('should not withdraw more than the free savings', async () => {
@@ -115,7 +118,7 @@ describe('Metas', () => {
     pagina.querySelector('#monto-ahorro')!.closest('form')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('Solo tienes S/ 1450.00 libres en tus ahorros para retirar');
+    expect(notificaciones()).toContain('Solo tienes S/ 1450.00 libres en tus ahorros para retirar');
   });
 
   it('should show the progress and how much to save per month', () => {
@@ -134,7 +137,7 @@ describe('Metas', () => {
     peticion.flush({ ...laptop, id: 2, nombre: 'Viaje', montoObjetivo: 800, fechaLimite: null, ahorrado: 0, faltante: 800, porcentaje: 0, aportes: [] });
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('Meta "Viaje" creada');
+    expect(notificaciones()).toContain('Meta "Viaje" creada');
   });
 
   it('should register a contribution and update the progress', async () => {
@@ -150,6 +153,6 @@ describe('Metas', () => {
     await fixture.whenStable();
 
     expect(pagina.textContent).toContain('26 %');
-    expect(pagina.textContent).toContain('Aporte de S/ 100.00 registrado');
+    expect(notificaciones()).toContain('Aporte de S/ 100.00 registrado');
   });
 });

@@ -170,16 +170,6 @@
     </ul>
   }
 </section>
-@if (mensaje(); as aviso) {
-  <p
-    role="status"
-    class="mt-6 rounded-md px-4 py-3 text-sm"
-    [class]="aviso.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'"
-  >
-    {{ aviso.texto }}
-  </p>
-}
-
 <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
   <!-- Formulario (en celular va primero; en escritorio a la derecha) -->
   <section

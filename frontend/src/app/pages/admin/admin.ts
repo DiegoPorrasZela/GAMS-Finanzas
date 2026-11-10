@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
+import { ToastService } from '../../services/toast.service';
 import { UsuariosService } from '../../services/usuarios.service';
 
 // Panel del administrador: CRUD de categorías y gestión de usuarios
@@ -26,7 +27,7 @@ export class Admin {
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly idActual = computed(() => this.auth.usuario()?.id);
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
+  private readonly toast = inject(ToastService);
 
   // ---- Categorías ----
   protected readonly grupos = computed(() => {
@@ -90,7 +91,6 @@ export class Admin {
   protected editarCategoria(categoria: Categoria): void {
     this.editando.set(categoria);
     this.formulario.setValue({ nombre: categoria.nombre, tipo: categoria.tipo });
-    this.mensaje.set(null);
     document.getElementById('nombre-categoria')?.focus();
   }
 
@@ -139,7 +139,9 @@ export class Admin {
     });
   }
 
+  // Éxito y errores de las acciones se muestran como notificaciones flotantes
   private mostrar(texto: string, error = false): void {
-    this.mensaje.set({ texto, error });
+    if (error) this.toast.error(texto);
+    else this.toast.exito(texto);
   }
 }

@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { ToastService } from '../../services/toast.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { Movimientos } from './movimientos';
 
@@ -31,6 +32,8 @@ describe('Movimientos', () => {
     input.value = valor;
     input.dispatchEvent(new Event('input'));
   };
+  // Mensajes que se mostraron como notificaciones flotantes
+  const notificaciones = () => TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' | ');
   const enviarFormulario = () => pagina.querySelector('form')!.dispatchEvent(new Event('submit'));
   const elegirIngreso = () =>
     [...pagina.querySelectorAll('button')].find((b) => b.textContent?.includes('▲ Ingreso'))!.click();
@@ -66,7 +69,7 @@ describe('Movimientos', () => {
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     await fixture.whenStable();
 
-    expect(pagina.textContent).toContain('se registrará automáticamente');
+    expect(notificaciones()).toContain('se registrará automáticamente');
     expect(pagina.textContent).toContain('día 9 de cada mes');
   });
 

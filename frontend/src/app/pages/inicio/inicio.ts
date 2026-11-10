@@ -11,6 +11,7 @@ import { soles } from '../../utils/formato';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { PresupuestosService } from '../../services/presupuestos.service';
+import { ToastService } from '../../services/toast.service';
 import {
   capitalizar,
   claveMes,
@@ -54,6 +55,7 @@ export class Inicio {
   private readonly categoriasService = inject(CategoriasService);
   private readonly auth = inject(AuthService);
   private readonly dialogo = inject(DialogoService);
+  private readonly toast = inject(ToastService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly nombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
@@ -193,17 +195,16 @@ export class Inicio {
       return;
     }
 
+    const monto = this.formSaldoInicial.getRawValue().monto!;
     this.guardandoSaldoInicial.set(true);
     this.errorSaldoInicial.set(null);
     this.movimientosService
-      .agregar({
-        descripcion: CATEGORIA_SALDO_INICIAL,
-        monto: this.formSaldoInicial.getRawValue().monto!,
-        fecha: hoy(),
-        categoriaId: categoria.id,
-      })
+      .agregar({ descripcion: CATEGORIA_SALDO_INICIAL, monto, fecha: hoy(), categoriaId: categoria.id })
       .subscribe({
-        next: () => this.guardandoSaldoInicial.set(false),
+        next: () => {
+          this.guardandoSaldoInicial.set(false);
+          this.toast.exito(`Saldo inicial de ${soles(monto)} registrado. ¡Listo para empezar!`);
+        },
         error: (e) => {
           this.guardandoSaldoInicial.set(false);
           this.errorSaldoInicial.set(mensajeDeError(e));
@@ -270,6 +271,7 @@ export class Inicio {
         next: () => {
           this.guardandoPresupuesto.set(false);
           this.editandoPresupuesto.set(false);
+          this.toast.exito(`Presupuesto de ${this.nombreDelMes()} guardado.`);
         },
         error: (e) => {
           this.guardandoPresupuesto.set(false);
@@ -291,7 +293,8 @@ export class Inicio {
     if (!confirmado) return;
     const [anio, mes] = this.mes().split('-').map(Number);
     this.presupuestosService.eliminar(anio, mes).subscribe({
-      error: (e) => this.errorPresupuesto.set(mensajeDeError(e)),
+      next: () => this.toast.exito(`Presupuesto de ${this.nombreDelMes()} eliminado.`),
+      error: (e) => this.toast.error(mensajeDeError(e)),
     });
   }
 }

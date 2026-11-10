@@ -16,6 +16,7 @@ import {
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
+import { ToastService } from '../../services/toast.service';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
@@ -57,7 +58,7 @@ export class Metas {
       this.categoriasService.error() ??
       this.recurrentesService.error(),
   );
-  protected readonly mensaje = signal<{ error: boolean; texto: string } | null>(null);
+  private readonly toast = inject(ToastService);
 
   // ---- Dinero ----
   private readonly totales = computed(() =>
@@ -124,7 +125,6 @@ export class Metas {
   protected abrirAccion(accion: 'separar' | 'retirar'): void {
     this.accion.set(this.accion() === accion ? null : accion);
     this.formAhorro.reset({ monto: null, frecuencia: 'UNA_VEZ' });
-    this.mensaje.set(null);
   }
 
   protected async guardarAhorro(): Promise<void> {
@@ -258,7 +258,6 @@ export class Metas {
       montoObjetivo: meta.montoObjetivo,
       fechaLimite: meta.fechaLimite ?? '',
     });
-    this.mensaje.set(null);
     document.getElementById('nombre-meta')?.focus();
   }
 
@@ -340,7 +339,9 @@ export class Metas {
     this.verAportesDe.set(this.verAportesDe() === meta.id ? null : meta.id);
   }
 
+  // Éxito y errores de las acciones se muestran como notificaciones flotantes
   private mostrar(texto: string, error = false): void {
-    this.mensaje.set({ texto, error });
+    if (error) this.toast.error(texto);
+    else this.toast.exito(texto);
   }
 }

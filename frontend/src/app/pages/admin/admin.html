@@ -3,16 +3,6 @@
   <p class="text-gray-500">Gestiona las categorías disponibles y las cuentas de usuario.</p>
 </section>
 
-@if (mensaje(); as aviso) {
-  <p
-    role="status"
-    class="mt-6 rounded-md px-4 py-3 text-sm"
-    [class]="aviso.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'"
-  >
-    {{ aviso.texto }}
-  </p>
-}
-
 <div class="mt-6 grid items-start gap-6 lg:grid-cols-2">
   <!-- Categorías -->
   <section class="rounded-xl border border-gray-200 bg-white shadow-sm">

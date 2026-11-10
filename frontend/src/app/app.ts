@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Dialogo } from './components/dialogo/dialogo';
+import { Toasts } from './components/toasts/toasts';
 import { AuthService } from './services/auth.service';
 
 interface Enlace {
@@ -10,7 +11,7 @@ interface Enlace {
 }
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Dialogo],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Dialogo, Toasts],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',

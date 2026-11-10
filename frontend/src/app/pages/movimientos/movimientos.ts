@@ -19,6 +19,7 @@ import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
+import { ToastService } from '../../services/toast.service';
 import {
   capitalizar,
   esUltimoDiaDelMes,
@@ -46,6 +47,7 @@ export class Movimientos {
   private readonly categoriasService = inject(CategoriasService);
   private readonly recurrentesService = inject(RecurrentesService);
   private readonly dialogo = inject(DialogoService);
+  private readonly toast = inject(ToastService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
@@ -54,8 +56,8 @@ export class Movimientos {
     () =>
       this.servicio.error() ?? this.categoriasService.error() ?? this.recurrentesService.error(),
   );
+  // Los errores al guardar se muestran junto al formulario; el resto, como notificación flotante
   protected readonly errorAccion = signal<string | null>(null);
-  protected readonly aviso = signal<string | null>(null);
 
   private readonly saldoTotal = computed(() => calcularTotales(this.servicio.movimientos()).saldo);
 
@@ -249,22 +251,26 @@ export class Movimientos {
     const repeticion = this.repeticionElegida();
     const primera = this.primerRegistro();
 
+    const tipo = this.tipoNuevo() === 'ingreso' ? 'Ingreso' : 'Gasto';
     this.guardando.set(true);
     this.errorAccion.set(null);
-    this.aviso.set(null);
     peticion.subscribe({
       next: () => {
         this.guardando.set(false);
         this.editando.set(null);
         if (automatico) {
-          // El backend ya registró el primer movimiento: se vuelve a cargar la lista
+          // El backend ya registró el primero si su fecha llegó: se vuelve a cargar la lista
           this.servicio.cargar();
-          this.aviso.set(
-            `"${datos.descripcion}" se registrará automáticamente ${repeticion}. ` +
+          this.toast.exito(
+            `🔁 "${datos.descripcion}" se registrará automáticamente ${repeticion}. ` +
               (primera <= this.hoy
                 ? 'El primero ya quedó registrado.'
                 : `El primero será el ${ddmmaaaa(primera)}.`),
           );
+        } else if (editando) {
+          this.toast.exito(`Cambios guardados en "${datos.descripcion}".`);
+        } else {
+          this.toast.exito(`${tipo} registrado: ${datos.descripcion} · ${soles(datos.monto)}`);
         }
         this.limpiarFormulario(categoriaId);
       },
@@ -312,21 +318,29 @@ export class Movimientos {
     });
     if (!confirmado) return;
 
-    this.errorAccion.set(null);
     this.servicio.eliminar(movimiento.id).subscribe({
       next: () => {
         if (this.editando()?.id === movimiento.id) this.cancelarEdicion();
+        this.toast.exito(`Movimiento "${movimiento.descripcion}" eliminado.`);
       },
-      error: (e) => this.errorAccion.set(mensajeDeError(e)),
+      error: (e) => this.toast.error(mensajeDeError(e)),
     });
   }
 
   // ---- Automáticos ----
 
   protected alternarRecurrente(recurrente: Recurrente): void {
-    this.recurrentesService.cambiarEstado(recurrente, !recurrente.activo).subscribe({
-      next: () => this.servicio.cargar(),
-      error: (e) => this.errorAccion.set(mensajeDeError(e)),
+    const reanudar = !recurrente.activo;
+    this.recurrentesService.cambiarEstado(recurrente, reanudar).subscribe({
+      next: () => {
+        this.servicio.cargar();
+        this.toast.info(
+          reanudar
+            ? `"${recurrente.descripcion}" se volverá a registrar automáticamente.`
+            : `"${recurrente.descripcion}" quedó en pausa: no se registrará hasta que lo reanudes.`,
+        );
+      },
+      error: (e) => this.toast.error(mensajeDeError(e)),
     });
   }
 
@@ -340,7 +354,8 @@ export class Movimientos {
     });
     if (!confirmado) return;
     this.recurrentesService.eliminar(recurrente.id).subscribe({
-      error: (e) => this.errorAccion.set(mensajeDeError(e)),
+      next: () => this.toast.exito(`"${recurrente.descripcion}" ya no se registrará automáticamente.`),
+      error: (e) => this.toast.error(mensajeDeError(e)),
     });
   }
 
