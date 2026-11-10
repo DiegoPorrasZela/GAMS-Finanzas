@@ -46,9 +46,10 @@ export class RecurrentesService {
     });
   }
 
-  // La fecha es la del primer registro y define el día en que se repite (del mes o de la semana)
-  crear(datos: DatosMovimiento, frecuencia: Frecuencia = 'MENSUAL'): Observable<Recurrente> {
-    return this.http.post<RecurrenteApi>(this.api, { ...datos, frecuencia }).pipe(
+  // datos.fecha es "desde": el primer registro es la primera fecha del calendario a partir de ese día.
+  // dia: día del mes para la frecuencia mensual (31 = último día); si no se envía, se usa el de la fecha.
+  crear(datos: DatosMovimiento, frecuencia: Frecuencia = 'MENSUAL', dia?: number): Observable<Recurrente> {
+    return this.http.post<RecurrenteApi>(this.api, { ...datos, frecuencia, dia }).pipe(
       map(desdeApi),
       tap((nuevo) => this.lista.update((lista) => [...lista, nuevo])),
     );

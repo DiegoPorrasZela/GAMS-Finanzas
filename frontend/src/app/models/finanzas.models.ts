@@ -30,7 +30,11 @@ export function clasificar(item: ConCategoria): Clase {
   return item.tipo;
 }
 
-export type Frecuencia = 'DIARIA' | 'SEMANAL' | 'MENSUAL';
+// QUINCENAL = el 15 y el último día de cada mes
+export type Frecuencia = 'DIARIA' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
+
+// En la frecuencia mensual, el día 31 significa "el último día del mes" (28, 29, 30 o 31)
+export const ULTIMO_DIA = 31;
 
 export interface Movimiento {
   id: number;

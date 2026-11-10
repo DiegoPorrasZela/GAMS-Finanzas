@@ -8,6 +8,7 @@ import {
   Movimiento,
   Recurrente,
   TipoMovimiento,
+  ULTIMO_DIA,
   clasificar,
   esAhorro,
   esRetiro,
@@ -17,7 +18,18 @@ import { CategoriasService } from '../../services/categorias.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
-import { capitalizar, hoy, mesesConDatos, nombreMes, textoFrecuencia } from '../../utils/fechas';
+import {
+  capitalizar,
+  esUltimoDiaDelMes,
+  fraseRepeticion,
+  hoy,
+  mesesConDatos,
+  nombreMes,
+  primeraFecha,
+  textoFrecuencia,
+} from '../../utils/fechas';
+
+const ddmmaaaa = (fecha: string) => fecha.split('-').reverse().join('/');
 import { noFutura } from '../../utils/validadores';
 
 // Efecto de un movimiento en el saldo: suma si es ingreso, resta si es gasto
@@ -76,7 +88,12 @@ export class Movimientos {
     fecha: [this.hoy, [Validators.required, noFutura]],
     repetir: [false],
     frecuencia: this.fb.control<Frecuencia>('MENSUAL'),
+    dia: this.fb.control<number>(new Date().getDate()), // día del mes (31 = último día)
   });
+
+  // Opciones del día del mes para los automáticos mensuales: 1 a 30 y "Último día del mes"
+  protected readonly dias = Array.from({ length: 30 }, (_, i) => i + 1);
+  protected readonly ULTIMO_DIA = ULTIMO_DIA;
 
   // ---- Movimientos automáticos ----
   protected readonly recurrentes = this.recurrentesService.recurrentes;
@@ -159,16 +176,27 @@ export class Movimientos {
     return !!categoria && esSaldoInicial(categoria);
   }
 
-  // "cada día", "cada semana (lunes)", "el día 9 de cada mes", según la fecha y la frecuencia elegidas
-  protected repeticionElegida(): string {
-    const { fecha, frecuencia } = this.formulario.getRawValue();
-    const texto = textoFrecuencia({
-      frecuencia,
-      dia: Number(fecha.slice(8, 10)) || new Date().getDate(),
-      proximoCargo: fecha || this.hoy,
-    });
-    return frecuencia === 'MENSUAL' ? `el ${texto.toLowerCase()}` : texto.toLowerCase();
+  // Al marcar "Repetir", propone como día del mes el de la fecha (o "último día" si la fecha es fin de mes)
+  protected alCambiarRepetir(): void {
+    const fecha = this.formulario.controls.fecha.value || this.hoy;
+    this.formulario.controls.dia.setValue(
+      esUltimoDiaDelMes(fecha) ? ULTIMO_DIA : Number(fecha.slice(8, 10)),
+    );
   }
+
+  // "cada día", "el 15 y el último día de cada mes", "el último día de cada mes"…
+  protected repeticionElegida(): string {
+    const { fecha, frecuencia, dia } = this.formulario.getRawValue();
+    return fraseRepeticion(frecuencia, dia, fecha || this.hoy);
+  }
+
+  // Primera fecha en que se registrará (la fecha del formulario es "desde")
+  protected primerRegistro(): string {
+    const { fecha, frecuencia, dia } = this.formulario.getRawValue();
+    return primeraFecha(fecha || this.hoy, frecuencia, dia);
+  }
+
+  protected readonly ddmmaaaa = ddmmaaaa;
 
   // Muestra el error de un campo solo después de tocarlo o de intentar guardar
   protected tieneError(campo: keyof typeof this.formulario.controls): boolean {
@@ -180,7 +208,7 @@ export class Movimientos {
     this.enviado.set(true);
     if (this.formulario.invalid || this.guardando()) return;
 
-    const { descripcion, monto, categoriaId, fecha, repetir, frecuencia } =
+    const { descripcion, monto, categoriaId, fecha, repetir, frecuencia, dia } =
       this.formulario.getRawValue();
     const datos: DatosMovimiento = {
       descripcion: descripcion.trim(),
@@ -203,9 +231,10 @@ export class Movimientos {
     const peticion: Observable<unknown> = editando
       ? this.servicio.actualizar(editando.id, datos)
       : automatico
-        ? this.recurrentesService.crear(datos, frecuencia)
+        ? this.recurrentesService.crear(datos, frecuencia, frecuencia === 'MENSUAL' ? dia : undefined)
         : this.servicio.agregar(datos);
     const repeticion = this.repeticionElegida();
+    const primera = this.primerRegistro();
 
     this.guardando.set(true);
     this.errorAccion.set(null);
@@ -217,7 +246,12 @@ export class Movimientos {
         if (automatico) {
           // El backend ya registró el primer movimiento: se vuelve a cargar la lista
           this.servicio.cargar();
-          this.aviso.set(`"${datos.descripcion}" se registrará automáticamente ${repeticion}.`);
+          this.aviso.set(
+            `"${datos.descripcion}" se registrará automáticamente ${repeticion}. ` +
+              (primera <= this.hoy
+                ? 'El primero ya quedó registrado.'
+                : `El primero será el ${ddmmaaaa(primera)}.`),
+          );
         }
         this.limpiarFormulario(categoriaId);
       },
@@ -238,6 +272,7 @@ export class Movimientos {
       fecha: movimiento.fecha,
       repetir: false,
       frecuencia: 'MENSUAL',
+      dia: Number(movimiento.fecha.slice(8, 10)),
     });
     this.enviado.set(false);
     this.errorAccion.set(null);
@@ -326,6 +361,7 @@ export class Movimientos {
       fecha: this.hoy,
       repetir: false,
       frecuencia: 'MENSUAL',
+      dia: new Date().getDate(),
     });
     this.enviado.set(false);
   }

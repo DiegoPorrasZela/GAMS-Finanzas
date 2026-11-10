@@ -21,7 +21,8 @@ Tecnológica del Perú (UTP).
 - **Movimientos:** registrar, editar, eliminar, filtrar por mes, tipo o categoría y buscar. No se aceptan
   fechas futuras, y si un gasto deja el saldo en negativo la app avisa antes de guardarlo.
 - **Movimientos automáticos:** al registrar el sueldo, el alquiler o un plan, se marca "Repetir
-  automáticamente" (cada día, semana o mes) y la app lo registra sola. Se pueden pausar, reanudar o eliminar.
+  automáticamente" (cada día, semana, quincena —el 15 y fin de mes— o mes, eligiendo el día o "último día del
+  mes") y la app lo registra sola, ajustándose a meses de 28, 29, 30 o 31 días. Se pueden pausar, reanudar o eliminar.
 - **Saldo inicial:** desde Inicio se registra una sola vez el dinero con el que se empieza.
 - **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública
   [Frankfurter](https://frankfurter.dev).

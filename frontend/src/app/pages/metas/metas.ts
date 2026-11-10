@@ -26,6 +26,7 @@ type FrecuenciaAhorro = 'UNA_VEZ' | Frecuencia;
 const CADA: Record<Frecuencia, string> = {
   DIARIA: 'cada día',
   SEMANAL: 'cada semana',
+  QUINCENAL: 'cada quincena (el 15 y el último día del mes)',
   MENSUAL: 'cada mes',
 };
 

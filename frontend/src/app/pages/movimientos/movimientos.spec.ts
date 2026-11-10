@@ -31,6 +31,8 @@ describe('Movimientos', () => {
     input.dispatchEvent(new Event('input'));
   };
   const enviarFormulario = () => pagina.querySelector('form')!.dispatchEvent(new Event('submit'));
+  const elegirIngreso = () =>
+    [...pagina.querySelectorAll('button')].find((b) => b.textContent?.includes('▲ Ingreso'))!.click();
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -64,7 +66,44 @@ describe('Movimientos', () => {
     await fixture.whenStable();
 
     expect(pagina.textContent).toContain('se registrará automáticamente');
-    expect(pagina.textContent).toContain('Día 9 de cada mes');
+    expect(pagina.textContent).toContain('día 9 de cada mes');
+  });
+
+  it('should schedule a biweekly salary (15th and last day of the month)', async () => {
+    elegirIngreso();
+    escribir('descripcion', 'Sueldo quincenal');
+    escribir('monto', '650');
+    pagina.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await fixture.whenStable();
+    const frecuencia = pagina.querySelector<HTMLSelectElement>('#frecuencia')!;
+    frecuencia.value = 'QUINCENAL';
+    frecuencia.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(pagina.textContent).toContain('el 15 y el último día de cada mes');
+    expect(pagina.textContent).toContain('Primer registro');
+
+    enviarFormulario();
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
+    expect(peticion.request.body).toMatchObject({ descripcion: 'Sueldo quincenal', monto: 650, frecuencia: 'QUINCENAL' });
+    peticion.flush({ id: 2, descripcion: 'Sueldo quincenal', monto: 650, tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', frecuencia: 'QUINCENAL', dia: 15, proximoCargo: '2099-01-15', activo: true });
+    http.expectOne(`${api}/movimientos`).flush(movimientos);
+    await fixture.whenStable();
+
+    expect(pagina.textContent).toContain('El 15 y el último día de cada mes'); // en la tarjeta de automáticos
+  });
+
+  it('should offer "last day of the month" for monthly salaries', async () => {
+    pagina.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await fixture.whenStable();
+    const dia = pagina.querySelector<HTMLSelectElement>('#dia')!;
+    const opciones = [...dia.options].map((o) => o.textContent?.trim());
+
+    expect(opciones).toContain('Último día del mes');
+    dia.value = dia.options[dia.options.length - 1].value; // "Último día del mes"
+    dia.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(pagina.textContent).toContain('el último día de cada mes');
   });
 
   it('should ask before saving an expense that leaves the balance negative', async () => {
