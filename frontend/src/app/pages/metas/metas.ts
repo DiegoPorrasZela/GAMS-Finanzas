@@ -14,11 +14,13 @@ import {
   esRetiro,
 } from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
+import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
 import { hoy, mesesHasta, textoFrecuencia } from '../../utils/fechas';
+import { ddmmaaaa, soles } from '../../utils/formato';
 import { noFutura, noPasada } from '../../utils/validadores';
 
 type FrecuenciaAhorro = 'UNA_VEZ' | Frecuencia;
@@ -41,6 +43,7 @@ export class Metas {
   private readonly movimientosService = inject(MovimientosService);
   private readonly categoriasService = inject(CategoriasService);
   private readonly recurrentesService = inject(RecurrentesService);
+  private readonly dialogo = inject(DialogoService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
@@ -124,7 +127,7 @@ export class Metas {
     this.mensaje.set(null);
   }
 
-  protected guardarAhorro(): void {
+  protected async guardarAhorro(): Promise<void> {
     this.formAhorro.markAllAsTouched();
     const accion = this.accion();
     if (!accion || this.formAhorro.invalid || this.guardandoAhorro()) return;
@@ -147,7 +150,14 @@ export class Metas {
     if (
       separar &&
       saldoNuevo < 0 &&
-      !confirm(`Tu saldo para gastar quedaría en S/ ${saldoNuevo.toFixed(2)}. ¿Separar de todos modos?`)
+      !(await this.dialogo.confirmar({
+        tono: 'aviso',
+        titulo: 'Tu saldo quedaría en negativo',
+        mensaje: `Si separas ${soles(monto!)}, tu saldo para gastar quedaría en ${soles(saldoNuevo)}.`,
+        detalle: '¿Te falta registrar algún ingreso? Puedes separarlo igual si ese dinero ya lo tienes guardado.',
+        confirmar: 'Separar de todos modos',
+        cancelar: 'Revisar',
+      }))
     ) {
       return;
     }
@@ -196,8 +206,15 @@ export class Metas {
     });
   }
 
-  protected eliminarAhorroAutomatico(recurrente: Recurrente): void {
-    if (!confirm('¿Dejar de separar este ahorro automáticamente?\n\nLo que ya se separó se conserva.')) return;
+  protected async eliminarAhorroAutomatico(recurrente: Recurrente): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: '¿Dejar de separar este ahorro?',
+      mensaje: `${soles(recurrente.monto)} ${textoFrecuencia(recurrente).toLowerCase()}`,
+      detalle: 'Lo que ya se separó se conserva en tus ahorros.',
+      confirmar: 'Dejar de separar',
+    });
+    if (!confirmado) return;
     this.recurrentesService.eliminar(recurrente.id).subscribe({
       error: (e) => this.mostrar(mensajeDeError(e), true),
     });
@@ -251,9 +268,18 @@ export class Metas {
     this.enviado.set(false);
   }
 
-  protected eliminarMeta(meta: MetaAhorro): void {
-    const pregunta = `¿Eliminar la meta "${meta.nombre}"?\n\nLo que aportaste (S/ ${meta.ahorrado.toFixed(2)}) vuelve a tus ahorros.`;
-    if (!confirm(pregunta)) return;
+  protected async eliminarMeta(meta: MetaAhorro): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: `¿Eliminar la meta "${meta.nombre}"?`,
+      mensaje: `Objetivo: ${soles(meta.montoObjetivo)} · llevas ${meta.porcentaje} %`,
+      detalle:
+        meta.ahorrado > 0
+          ? `Lo que aportaste (${soles(meta.ahorrado)}) no se pierde: vuelve a tus ahorros.`
+          : undefined,
+      confirmar: 'Eliminar meta',
+    });
+    if (!confirmado) return;
     this.servicio.eliminar(meta.id).subscribe({
       next: () => {
         this.mostrar(`Meta "${meta.nombre}" eliminada. Su dinero volvió a tus ahorros.`);
@@ -296,8 +322,15 @@ export class Metas {
     });
   }
 
-  protected quitarAporte(meta: MetaAhorro, aporte: Aporte): void {
-    if (!confirm(`¿Quitar el aporte de S/ ${aporte.monto.toFixed(2)}? Vuelve a tus ahorros.`)) return;
+  protected async quitarAporte(meta: MetaAhorro, aporte: Aporte): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: '¿Quitar este aporte?',
+      mensaje: `${soles(aporte.monto)} del ${ddmmaaaa(aporte.fecha)} en "${meta.nombre}"`,
+      detalle: 'El dinero no se pierde: vuelve a tus ahorros.',
+      confirmar: 'Quitar aporte',
+    });
+    if (!confirmado) return;
     this.servicio.quitarAporte(meta.id, aporte.id).subscribe({
       error: (e) => this.mostrar(mensajeDeError(e), true),
     });

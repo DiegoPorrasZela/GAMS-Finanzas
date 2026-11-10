@@ -8,6 +8,7 @@ import {
 } from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
+import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
 import { UsuariosService } from '../../services/usuarios.service';
 
@@ -21,6 +22,7 @@ export class Admin {
   private readonly categoriasService = inject(CategoriasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
+  private readonly dialogo = inject(DialogoService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly idActual = computed(() => this.auth.usuario()?.id);
@@ -98,8 +100,15 @@ export class Admin {
     this.enviado.set(false);
   }
 
-  protected eliminarCategoria(categoria: Categoria): void {
-    if (!confirm(`¿Eliminar la categoría "${categoria.nombre}"?`)) return;
+  protected async eliminarCategoria(categoria: Categoria): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: `¿Eliminar la categoría "${categoria.nombre}"?`,
+      mensaje: `Categoría de ${categoria.tipo === 'ingreso' ? 'ingresos' : 'gastos'}.`,
+      detalle: 'Solo se puede eliminar si ningún usuario la usa en sus movimientos.',
+      confirmar: 'Eliminar categoría',
+    });
+    if (!confirmado) return;
 
     this.categoriasService.eliminar(categoria.id).subscribe({
       next: () => {
@@ -110,9 +119,16 @@ export class Admin {
     });
   }
 
-  protected eliminarUsuario(usuario: Usuario): void {
-    const pregunta = `¿Eliminar la cuenta de ${usuario.nombre}? También se borrarán todos sus movimientos.`;
-    if (!confirm(pregunta)) return;
+  protected async eliminarUsuario(usuario: Usuario): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: `¿Eliminar la cuenta de ${usuario.nombre}?`,
+      mensaje: usuario.email,
+      detalle:
+        'También se borrarán todos sus movimientos, presupuestos, metas y ahorros. Esta acción no se puede deshacer.',
+      confirmar: 'Eliminar cuenta',
+    });
+    if (!confirmado) return;
 
     this.usuariosService.eliminar(usuario.id).subscribe({
       next: () => {

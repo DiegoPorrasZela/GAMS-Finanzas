@@ -5,7 +5,9 @@ import { RouterLink } from '@angular/router';
 import { CATEGORIA_SALDO_INICIAL, clasificar, esSaldoInicial } from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
+import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
+import { soles } from '../../utils/formato';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { PresupuestosService } from '../../services/presupuestos.service';
@@ -51,6 +53,7 @@ export class Inicio {
   private readonly metasService = inject(MetasService);
   private readonly categoriasService = inject(CategoriasService);
   private readonly auth = inject(AuthService);
+  private readonly dialogo = inject(DialogoService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly nombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
@@ -275,8 +278,17 @@ export class Inicio {
       });
   }
 
-  protected eliminarPresupuesto(): void {
-    if (!confirm(`¿Eliminar el presupuesto de ${this.nombreDelMes()}?`)) return;
+  protected async eliminarPresupuesto(): Promise<void> {
+    const presupuesto = this.presupuesto();
+    if (!presupuesto) return;
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: `¿Eliminar el presupuesto de ${this.nombreDelMes()}?`,
+      mensaje: `Gasto máximo ${soles(presupuesto.limiteGasto)} · meta de ahorro ${soles(presupuesto.ahorroObjetivo)}`,
+      detalle: 'Tus movimientos no cambian. Puedes volver a definirlo cuando quieras.',
+      confirmar: 'Eliminar presupuesto',
+    });
+    if (!confirmado) return;
     const [anio, mes] = this.mes().split('-').map(Number);
     this.presupuestosService.eliminar(anio, mes).subscribe({
       error: (e) => this.errorPresupuesto.set(mensajeDeError(e)),

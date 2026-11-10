@@ -31,6 +31,7 @@ Tecnológica del Perú (UTP).
 ## Tecnologías
 
 - Angular 22 (componentes standalone, signals, formularios reactivos)
+- Diálogos con el elemento nativo `<dialog>` (accesibles: foco atrapado, Esc, lector de pantalla)
 - Tailwind CSS 4
 - TypeScript y Vitest para las pruebas
 
@@ -80,6 +81,7 @@ en el backend, que rechaza cualquier petición sin permiso aunque alguien salte 
 | Chain of Responsibility | `interceptors/auth.interceptor.ts` | Cada petición pasa por el interceptor: agrega el token y maneja la sesión vencida (401) |
 | Guard | `guards/auth.guards.ts` | Decidir si se puede entrar a una ruta |
 | Adapter | Funciones `desdeApi()` de los servicios | Convertir el formato del API (`INGRESO`) al de la app (`ingreso`) |
+| Mediator | `DialogoService` + `<app-dialogo>` | Cualquier página pide una confirmación (`await dialogo.confirmar(...)`) sin conocer al componente que la dibuja |
 
 ## Cómo ejecutar
 

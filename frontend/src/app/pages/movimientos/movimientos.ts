@@ -15,6 +15,7 @@ import {
   esSaldoInicial,
 } from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
+import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
@@ -28,8 +29,7 @@ import {
   primeraFecha,
   textoFrecuencia,
 } from '../../utils/fechas';
-
-const ddmmaaaa = (fecha: string) => fecha.split('-').reverse().join('/');
+import { ddmmaaaa, soles } from '../../utils/formato';
 import { noFutura } from '../../utils/validadores';
 
 // Efecto de un movimiento en el saldo: suma si es ingreso, resta si es gasto
@@ -45,6 +45,7 @@ export class Movimientos {
   private readonly servicio = inject(MovimientosService);
   private readonly categoriasService = inject(CategoriasService);
   private readonly recurrentesService = inject(RecurrentesService);
+  private readonly dialogo = inject(DialogoService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly hoy = hoy();
@@ -204,7 +205,7 @@ export class Movimientos {
     return control.invalid && (control.touched || this.enviado());
   }
 
-  protected guardar(): void {
+  protected async guardar(): Promise<void> {
     this.enviado.set(true);
     if (this.formulario.invalid || this.guardando()) return;
 
@@ -223,7 +224,19 @@ export class Movimientos {
       this.saldoTotal() -
       (editando ? efectoEnSaldo(editando.tipo, editando.monto) : 0) +
       efectoEnSaldo(this.tipoNuevo(), datos.monto);
-    if (saldoNuevo < 0 && saldoNuevo < this.saldoTotal() && !this.confirmarSaldoNegativo(saldoNuevo)) {
+    if (
+      saldoNuevo < 0 &&
+      saldoNuevo < this.saldoTotal() &&
+      !(await this.dialogo.confirmar({
+        tono: 'aviso',
+        titulo: 'Tu saldo quedaría en negativo',
+        mensaje: `Con este movimiento tu saldo quedaría en ${soles(saldoNuevo)}.`,
+        detalle:
+          '¿Te falta registrar algún ingreso o tu saldo inicial? Si el gasto es real, puedes guardarlo igual.',
+        confirmar: 'Guardar de todos modos',
+        cancelar: 'Revisar',
+      }))
+    ) {
       return;
     }
 
@@ -284,13 +297,20 @@ export class Movimientos {
     this.limpiarFormulario();
   }
 
-  protected eliminar(movimiento: Movimiento): void {
-    let pregunta = `¿Eliminar "${movimiento.descripcion}"?`;
+  protected async eliminar(movimiento: Movimiento): Promise<void> {
     const saldoNuevo = this.saldoTotal() - efectoEnSaldo(movimiento.tipo, movimiento.monto);
-    if (movimiento.tipo === 'ingreso' && saldoNuevo < 0) {
-      pregunta += `\n\nTu saldo quedará en S/ ${saldoNuevo.toFixed(2)}.`;
-    }
-    if (!confirm(pregunta)) return;
+    const signo = movimiento.tipo === 'ingreso' ? '+' : '-';
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: '¿Eliminar este movimiento?',
+      mensaje: `"${movimiento.descripcion}" · ${signo} ${soles(movimiento.monto)} · ${ddmmaaaa(movimiento.fecha)}`,
+      detalle:
+        movimiento.tipo === 'ingreso' && saldoNuevo < 0
+          ? `Tu saldo quedará en ${soles(saldoNuevo)}.`
+          : undefined,
+      confirmar: 'Eliminar',
+    });
+    if (!confirmado) return;
 
     this.errorAccion.set(null);
     this.servicio.eliminar(movimiento.id).subscribe({
@@ -310,9 +330,15 @@ export class Movimientos {
     });
   }
 
-  protected eliminarRecurrente(recurrente: Recurrente): void {
-    const pregunta = `¿Dejar de registrar "${recurrente.descripcion}" cada mes?\n\nLos movimientos que ya se registraron se conservan.`;
-    if (!confirm(pregunta)) return;
+  protected async eliminarRecurrente(recurrente: Recurrente): Promise<void> {
+    const confirmado = await this.dialogo.confirmar({
+      tono: 'peligro',
+      titulo: '¿Dejar de registrar este automático?',
+      mensaje: `"${recurrente.descripcion}" · ${soles(recurrente.monto)} · ${textoFrecuencia(recurrente).toLowerCase()}`,
+      detalle: 'Los movimientos que ya se registraron se conservan.',
+      confirmar: 'Eliminar automático',
+    });
+    if (!confirmado) return;
     this.recurrentesService.eliminar(recurrente.id).subscribe({
       error: (e) => this.errorAccion.set(mensajeDeError(e)),
     });
@@ -342,14 +368,6 @@ export class Movimientos {
     this.filtroTipo.set('todos');
     this.filtroCategoria.set('');
     this.busqueda.set('');
-  }
-
-  private confirmarSaldoNegativo(saldo: number): boolean {
-    return confirm(
-      `Con este movimiento tu saldo quedaría en S/ ${saldo.toFixed(2)}.\n\n` +
-        '¿Te falta registrar algún ingreso o tu saldo inicial? Si el gasto es real, puedes guardarlo igual.\n\n' +
-        '¿Guardar de todos modos?',
-    );
   }
 
   // Limpia el formulario pero mantiene el tipo y la categoría elegidos

@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { DialogoService } from '../../services/dialogo.service';
 import { Movimientos } from './movimientos';
 
 const api = environment.apiUrl;
@@ -107,13 +108,15 @@ describe('Movimientos', () => {
   });
 
   it('should ask before saving an expense that leaves the balance negative', async () => {
-    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirmar = vi.spyOn(TestBed.inject(DialogoService), 'confirmar').mockResolvedValue(false);
     escribir('descripcion', 'Laptop');
     escribir('monto', '5000');
     enviarFormulario();
     await fixture.whenStable();
 
-    expect(confirmar).toHaveBeenCalledWith(expect.stringContaining('tu saldo quedaría en S/ -3545.00'));
+    expect(confirmar).toHaveBeenCalledWith(
+      expect.objectContaining({ tono: 'aviso', mensaje: expect.stringContaining('S/ -3,545.00') }),
+    );
     // Al cancelar no se envía nada (http.verify() lo comprueba)
   });
 
@@ -177,9 +180,11 @@ describe('Movimientos', () => {
   });
 
   it('should delete a movement after confirming', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmar = vi.spyOn(TestBed.inject(DialogoService), 'confirmar').mockResolvedValue(true);
     pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    await fixture.whenStable(); // espera la respuesta del diálogo
 
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ tono: 'peligro', confirmar: 'Eliminar' }));
     http.expectOne({ method: 'DELETE', url: `${api}/movimientos/2` }).flush(null);
     await fixture.whenStable();
 
