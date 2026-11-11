@@ -7,6 +7,8 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Logo } from '../../components/logo/logo';
+import { VerPassword } from '../../components/ver-password/ver-password';
 import { AuthService } from '../../services/auth.service';
 import { mensajeDeError } from '../../services/errores';
 
@@ -17,7 +19,7 @@ function contrasenasIguales(grupo: AbstractControl): ValidationErrors | null {
 }
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo, VerPassword],
   selector: 'app-registro',
   templateUrl: './registro.html',
 })
@@ -27,6 +29,7 @@ export class Registro {
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly enviando = signal(false);
+  protected readonly verPassword = signal(false);
   protected readonly enviado = signal(false);
   protected readonly error = signal<string | null>(null);
 

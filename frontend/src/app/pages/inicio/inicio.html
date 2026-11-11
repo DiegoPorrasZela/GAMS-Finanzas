@@ -51,6 +51,7 @@
         <input
           id="saldo-inicial"
           type="number"
+          inputmode="decimal"
           min="0.01"
           step="0.01"
           formControlName="monto"
@@ -192,6 +193,7 @@
               <input
                 id="limite"
                 type="number"
+                inputmode="decimal"
                 min="0.01"
                 step="0.01"
                 formControlName="limiteGasto"
@@ -213,6 +215,7 @@
               <input
                 id="ahorro"
                 type="number"
+                inputmode="decimal"
                 min="0"
                 step="0.01"
                 formControlName="ahorroObjetivo"
@@ -340,7 +343,7 @@
                   >Separar a ahorros</a
                 >
               }
-              <span class="text-gray-400">(lo que separaste a tus ahorros este mes)</span>
+              <span class="text-gray-500">(lo que separaste a tus ahorros este mes)</span>
             </p>
           </div>
         }

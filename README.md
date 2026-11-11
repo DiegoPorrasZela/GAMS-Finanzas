@@ -32,6 +32,8 @@ Tecnológica del Perú (UTP).
 
 - Angular 22 (componentes standalone, signals, formularios reactivos)
 - Diálogos con el elemento nativo `<dialog>` (accesibles: foco atrapado, Esc, lector de pantalla)
+- Carga diferida de páginas (`loadComponent`): la carga inicial pesa 334 kB en vez de 501 kB
+- Tipografía Inter con números de ancho fijo (`tabular-nums`) para que los montos queden alineados
 - Tailwind CSS 4
 - TypeScript y Vitest para las pruebas
 

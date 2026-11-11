@@ -44,19 +44,19 @@
       <p class="mt-1 text-2xl font-bold text-sky-700" [class.text-red-600!]="libres() < 0">
         S/ {{ libres() | number: '1.2-2' }}
       </p>
-      <p class="text-xs text-gray-400">Para aportar a tus metas o retirar</p>
+      <p class="text-xs text-gray-500">Para aportar a tus metas o retirar</p>
     </div>
     <div>
       <p class="text-sm text-gray-500">En tus metas</p>
       <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
-      <p class="text-xs text-gray-400">Ya repartido entre tus metas</p>
+      <p class="text-xs text-gray-500">Ya repartido entre tus metas</p>
     </div>
     <div>
       <p class="text-sm text-gray-500">Total ahorrado</p>
       <p class="mt-1 text-2xl font-bold text-gray-900">
         S/ {{ totalAhorrado() | number: '1.2-2' }}
       </p>
-      <p class="text-xs text-gray-400">Tu saldo para gastar: S/ {{ saldo() | number: '1.2-2' }}</p>
+      <p class="text-xs text-gray-500">Tu saldo para gastar: S/ {{ saldo() | number: '1.2-2' }}</p>
     </div>
   </div>
 
@@ -77,6 +77,7 @@
             <input
               id="monto-ahorro"
               type="number"
+              inputmode="decimal"
               min="0.01"
               step="0.01"
               formControlName="monto"
@@ -140,7 +141,7 @@
           <span class="text-gray-700">
             🔁 <strong>S/ {{ recurrente.monto | number: '1.2-2' }}</strong>
             {{ textoFrecuencia(recurrente).toLowerCase() }}
-            <span class="text-gray-400">
+            <span class="text-gray-500">
               ·
               @if (recurrente.activo) {
                 próximo: {{ recurrente.proximoCargo | date: 'dd/MM/yyyy' }}
@@ -204,6 +205,7 @@
           <input
             id="objetivo"
             type="number"
+            inputmode="decimal"
             min="0.01"
             step="0.01"
             formControlName="montoObjetivo"
@@ -219,7 +221,7 @@
 
       <div>
         <label for="fecha-limite" class="block text-sm font-medium text-gray-700">
-          Fecha límite <span class="font-normal text-gray-400">(opcional)</span>
+          Fecha límite <span class="font-normal text-gray-500">(opcional)</span>
         </label>
         <input
           id="fecha-limite"
@@ -351,6 +353,7 @@
                 <input
                   [id]="'monto-aporte-' + meta.id"
                   type="number"
+                  inputmode="decimal"
                   min="0.01"
                   step="0.01"
                   formControlName="monto"
@@ -404,7 +407,7 @@
                     type="button"
                     (click)="quitarAporte(meta, aporte)"
                     [attr.aria-label]="'Eliminar aporte de ' + aporte.monto"
-                    class="text-gray-400 hover:text-red-600"
+                    class="text-gray-500 hover:text-red-600"
                   >
                     ✕
                   </button>

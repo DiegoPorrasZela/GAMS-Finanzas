@@ -1,6 +1,7 @@
 <section class="mx-auto max-w-md">
   <div class="text-center">
-    <h1 class="text-3xl font-bold text-gray-900">Inicia sesión</h1>
+    <app-logo class="mx-auto mb-4 size-14" />
+    <h1 class="text-3xl font-bold tracking-tight text-gray-900">Inicia sesión</h1>
     <p class="mt-1 text-gray-500">Entra para ver y registrar tus movimientos.</p>
   </div>
 
@@ -38,14 +39,17 @@
 
     <div>
       <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-      <input
-        id="password"
-        type="password"
-        autocomplete="current-password"
-        formControlName="password"
-        class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-        [class.border-red-500!]="tieneError('password')"
-      />
+      <div class="relative mt-1">
+        <input
+          id="password"
+          [type]="verPassword() ? 'text' : 'password'"
+          autocomplete="current-password"
+          formControlName="password"
+          class="w-full rounded-md border border-gray-300 py-2 pr-11 pl-3 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          [class.border-red-500!]="tieneError('password')"
+        />
+        <app-ver-password [(visible)]="verPassword" />
+      </div>
       @if (tieneError('password')) {
         <p class="mt-1 text-xs text-red-600">Escribe tu contraseña.</p>
       }

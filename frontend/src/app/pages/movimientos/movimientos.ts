@@ -81,6 +81,17 @@ export class Movimientos {
 
   protected readonly clasificar = clasificar;
   protected readonly textoFrecuencia = textoFrecuencia;
+
+  // Descripciones que ya usó (la más reciente de cada una) del tipo elegido, para autocompletar
+  protected readonly descripcionesAnteriores = computed(() => {
+    const tipo = this.tipoNuevo();
+    const vistas = new Map<string, Movimiento>();
+    for (const m of this.servicio.movimientos()) {
+      const clave = m.descripcion.trim().toLowerCase();
+      if (clasificar(m) === tipo && !vistas.has(clave)) vistas.set(clave, m);
+    }
+    return [...vistas.values()].slice(0, 30);
+  });
   protected readonly enviado = signal(false);
   protected readonly guardando = signal(false);
 
@@ -301,6 +312,41 @@ export class Movimientos {
   protected cancelarEdicion(): void {
     this.editando.set(null);
     this.limpiarFormulario();
+  }
+
+  // Al elegir una descripción que ya usó, completa la categoría y el monto (si todavía está vacío)
+  protected alElegirDescripcion(): void {
+    if (this.editando()) return;
+    const texto = this.formulario.controls.descripcion.value.trim().toLowerCase();
+    const anterior = this.descripcionesAnteriores().find(
+      (m) => m.descripcion.trim().toLowerCase() === texto,
+    );
+    if (!anterior) return;
+    if (this.categoriasNuevo().some((c) => c.id === anterior.categoriaId)) {
+      this.formulario.controls.categoriaId.setValue(anterior.categoriaId);
+    }
+    if (this.formulario.controls.monto.value === null) {
+      this.formulario.controls.monto.setValue(anterior.monto);
+    }
+  }
+
+  // "Registrar de nuevo": copia un movimiento al formulario con la fecha de hoy (ej. el almuerzo de cada día)
+  protected registrarDeNuevo(movimiento: Movimiento): void {
+    this.editando.set(null);
+    this.tipoNuevo.set(movimiento.tipo);
+    this.formulario.reset({
+      descripcion: movimiento.descripcion,
+      monto: movimiento.monto,
+      categoriaId: movimiento.categoriaId,
+      fecha: this.hoy,
+      repetir: false,
+      frecuencia: 'MENSUAL',
+      dia: new Date().getDate(),
+    });
+    this.enviado.set(false);
+    this.errorAccion.set(null);
+    document.getElementById('monto')?.focus();
+    this.toast.info(`Listo para registrar "${movimiento.descripcion}" con fecha de hoy: revisa el monto y agrégalo.`);
   }
 
   protected async eliminar(movimiento: Movimiento): Promise<void> {

@@ -2,8 +2,9 @@
   <nav
     class="max-w-6xl mx-auto flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
   >
-    <a routerLink="/" class="text-xl font-bold text-white">
-      <span class="text-green-500">GAMS</span> Finanzas
+    <a routerLink="/" class="flex items-center gap-2.5 text-xl font-bold tracking-tight text-white">
+      <app-logo class="size-8" />
+      <span><span class="text-green-500">GAMS</span> Finanzas</span>
     </a>
     <div class="flex flex-wrap gap-2">
       @for (enlace of enlaces(); track enlace.ruta) {

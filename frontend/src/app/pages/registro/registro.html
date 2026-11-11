@@ -1,6 +1,7 @@
 <section class="mx-auto max-w-md">
   <div class="text-center">
-    <h1 class="text-3xl font-bold text-gray-900">Crea tu cuenta</h1>
+    <app-logo class="mx-auto mb-4 size-14" />
+    <h1 class="text-3xl font-bold tracking-tight text-gray-900">Crea tu cuenta</h1>
     <p class="mt-1 text-gray-500">Empieza a llevar el control de tus ingresos y gastos.</p>
   </div>
 
@@ -49,14 +50,18 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          autocomplete="new-password"
-          formControlName="password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-          [class.border-red-500!]="tieneError('password')"
-        />
+        <div class="relative mt-1">
+          <input
+            id="password"
+            [type]="verPassword() ? 'text' : 'password'"
+            autocomplete="new-password"
+            formControlName="password"
+            class="w-full rounded-md border border-gray-300 py-2 pr-11 pl-3 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+            [class.border-red-500!]="tieneError('password')"
+          />
+          <!-- Un solo botón muestra u oculta ambas contraseñas -->
+          <app-ver-password [(visible)]="verPassword" />
+        </div>
         @if (tieneError('password')) {
           <p class="mt-1 text-xs text-red-600">Mínimo 6 caracteres.</p>
         }
@@ -65,7 +70,7 @@
         <label for="confirmar" class="block text-sm font-medium text-gray-700">Repite la contraseña</label>
         <input
           id="confirmar"
-          type="password"
+          [type]="verPassword() ? 'text' : 'password'"
           autocomplete="new-password"
           formControlName="confirmar"
           class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"

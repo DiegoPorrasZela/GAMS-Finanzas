@@ -95,9 +95,20 @@
             type="text"
             formControlName="descripcion"
             placeholder="Ej. Menú del almuerzo"
+            autocomplete="off"
+            list="descripciones-anteriores"
+            (change)="alElegirDescripcion()"
             class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
             [class.border-red-500!]="tieneError('descripcion')"
           />
+          <!-- Sugerencias: lo que ya registraste antes (del tipo elegido) -->
+          <datalist id="descripciones-anteriores">
+            @for (anterior of descripcionesAnteriores(); track anterior.descripcion) {
+              <option [value]="anterior.descripcion">
+                {{ anterior.categoria }} · S/ {{ anterior.monto | number: '1.2-2' }}
+              </option>
+            }
+          </datalist>
           @if (tieneError('descripcion')) {
             <p class="mt-1 text-xs text-red-600">Escribe una descripción (máx. 60 caracteres).</p>
           }
@@ -115,6 +126,7 @@
             <input
               id="monto"
               type="number"
+              inputmode="decimal"
               min="0.01"
               step="0.01"
               formControlName="monto"
@@ -424,15 +436,39 @@
             {{ movimiento.monto | number: '1.2-2' }}
           </p>
 
+          <!-- En computadoras aparecen al pasar el mouse; en celulares y tablets táctiles se ven siempre -->
           <div
-            class="flex shrink-0 gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+            class="flex shrink-0 gap-1 con-mouse:opacity-0 con-mouse:group-hover:opacity-100 con-mouse:focus-within:opacity-100"
           >
+            @if (clase === 'ingreso' || clase === 'gasto') {
+              <button
+                type="button"
+                (click)="registrarDeNuevo(movimiento)"
+                [attr.aria-label]="'Registrar de nuevo ' + movimiento.descripcion"
+                title="Registrar de nuevo (con la fecha de hoy)"
+                class="rounded-md p-1.5 text-gray-500 transition hover:bg-sky-50 hover:text-sky-700"
+              >
+                <svg
+                  class="size-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="9" y="9" width="12" height="12" rx="2" />
+                  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+                </svg>
+              </button>
+            }
             <button
               type="button"
               (click)="editar(movimiento)"
               [attr.aria-label]="'Editar ' + movimiento.descripcion"
               title="Editar"
-              class="rounded-md p-1.5 text-gray-400 transition hover:bg-green-50 hover:text-green-700"
+              class="rounded-md p-1.5 text-gray-500 transition hover:bg-green-50 hover:text-green-700"
             >
               <svg
                 class="size-4"
@@ -453,7 +489,7 @@
               (click)="eliminar(movimiento)"
               [attr.aria-label]="'Eliminar ' + movimiento.descripcion"
               title="Eliminar"
-              class="rounded-md p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              class="rounded-md p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
             >
               <svg
                 class="size-4"

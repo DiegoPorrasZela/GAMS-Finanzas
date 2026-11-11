@@ -74,7 +74,7 @@
                 <span class="truncate text-gray-900">{{ categoria.nombre }}</span>
                 <span class="flex shrink-0 gap-2 text-sm">
                   @if (esDelSistema(categoria)) {
-                    <span class="text-xs text-gray-400" title="Sostiene reglas de la aplicación (saldo inicial y ahorros)"
+                    <span class="text-xs text-gray-500" title="Sostiene reglas de la aplicación (saldo inicial y ahorros)"
                       >Del sistema</span
                     >
                   } @else {
@@ -96,7 +96,7 @@
                 </span>
               </li>
             } @empty {
-              <li class="py-2 text-sm text-gray-400">Sin categorías</li>
+              <li class="py-2 text-sm text-gray-500">Sin categorías</li>
             }
           </ul>
         </div>
@@ -116,7 +116,7 @@
             <p class="truncate font-medium text-gray-900">
               {{ usuario.nombre }}
               @if (usuario.id === idActual()) {
-                <span class="text-sm font-normal text-gray-400">(tú)</span>
+                <span class="text-sm font-normal text-gray-500">(tú)</span>
               }
             </p>
             <p class="truncate text-sm text-gray-500">{{ usuario.email }}</p>

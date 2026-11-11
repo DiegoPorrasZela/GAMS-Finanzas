@@ -1,11 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Logo } from '../../components/logo/logo';
+import { VerPassword } from '../../components/ver-password/ver-password';
 import { AuthService } from '../../services/auth.service';
 import { mensajeDeError } from '../../services/errores';
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, Logo, VerPassword],
   selector: 'app-login',
   templateUrl: './login.html',
 })
@@ -17,6 +19,7 @@ export class Login {
 
   protected readonly sesionExpirada = this.ruta.snapshot.queryParamMap.has('expirada');
   protected readonly enviando = signal(false);
+  protected readonly verPassword = signal(false);
   protected readonly lento = signal(false);
   protected readonly enviado = signal(false);
   protected readonly error = signal<string | null>(null);

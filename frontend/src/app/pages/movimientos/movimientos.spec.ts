@@ -133,6 +133,32 @@ describe('Movimientos', () => {
     expect(pagina.textContent).toContain('La fecha no puede ser futura');
   });
 
+  it('should suggest previous descriptions and fill category and amount when one is chosen', async () => {
+    const sugerencias = [...pagina.querySelectorAll('#descripciones-anteriores option')].map(
+      (o) => (o as HTMLOptionElement).value,
+    );
+    expect(sugerencias).toEqual(['Menú del almuerzo', 'Recarga de tarjeta']); // solo gastos
+
+    escribir('descripcion', 'menú del almuerzo');
+    pagina.querySelector('#descripcion')!.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(pagina.querySelector<HTMLInputElement>('#monto')!.value).toBe('15');
+    expect(pagina.querySelector<HTMLSelectElement>('#categoria')!.selectedOptions[0].textContent?.trim()).toBe(
+      'Comida',
+    );
+  });
+
+  it('should copy a movement to the form with today\'s date ("Registrar de nuevo")', async () => {
+    pagina.querySelector<HTMLButtonElement>('button[aria-label="Registrar de nuevo Recarga de tarjeta"]')!.click();
+    await fixture.whenStable();
+
+    expect(pagina.querySelector<HTMLInputElement>('#descripcion')!.value).toBe('Recarga de tarjeta');
+    expect(pagina.querySelector<HTMLInputElement>('#monto')!.value).toBe('30');
+    expect(pagina.querySelector<HTMLInputElement>('#fecha')!.value).not.toBe('2026-11-05'); // la de hoy
+    expect(pagina.textContent).toContain('Nuevo movimiento'); // no es edición: se registra uno nuevo
+  });
+
   it('should list the movements from the API', () => {
     expect(filas().length).toBe(3);
     expect(pagina.textContent).toContain('Pago de prácticas');
