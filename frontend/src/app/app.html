@@ -6,7 +6,9 @@
       <app-logo class="size-8" />
       <span><span class="text-green-500">GAMS</span> Finanzas</span>
     </a>
-    <div class="flex flex-wrap gap-2">
+
+    <!-- Con sesión, en celular y tablet estos enlaces van en la barra inferior (app-navegacion-movil) -->
+    <div class="flex-wrap gap-2 lg:flex" [class.hidden]="usuario()" [class.flex]="!usuario()">
       @for (enlace of enlaces(); track enlace.ruta) {
         <a
           [routerLink]="enlace.ruta"
@@ -20,8 +22,25 @@
     </div>
 
     <!-- Sesión -->
-    <div class="flex items-center gap-3 text-sm">
+    <div class="items-center gap-3 text-sm lg:flex" [class.hidden]="usuario()" [class.flex]="!usuario()">
       @if (usuario(); as usuario) {
+        @if (sePuedeInstalar()) {
+          <button
+            type="button"
+            (click)="instalar()"
+            title="Instalar GAMS Finanzas como app"
+            class="rounded-md px-2 py-1.5 font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+          >
+            📲 Instalar app
+          </button>
+        }
+        <button
+          type="button"
+          (click)="registrar()"
+          class="rounded-md bg-green-600 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-green-700"
+        >
+          + Registrar
+        </button>
         <span class="text-gray-300">
           {{ usuario.nombre }}
           @if (esAdmin()) {
@@ -49,9 +68,18 @@
   </nav>
 </header>
 
-<main class="max-w-6xl mx-auto px-4 py-8">
+<!-- Con sesión, en celular se deja espacio abajo para la barra de pestañas -->
+<main class="max-w-6xl mx-auto px-4 py-8 lg:pb-8" [class.pb-28]="usuario()">
   <router-outlet></router-outlet>
 </main>
+
+@if (usuario()) {
+  <app-navegacion-movil />
+  <!-- Se descarga cuando el navegador queda libre: no pesa en la primera carga y ya está listo al tocar "+" -->
+  @defer (on idle) {
+    <app-registro-rapido />
+  }
+}
 
 <!-- Diálogos de confirmación y notificaciones de toda la app (los abren DialogoService y ToastService) -->
 <app-dialogo />

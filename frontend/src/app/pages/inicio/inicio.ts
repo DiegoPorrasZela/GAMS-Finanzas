@@ -11,6 +11,7 @@ import { soles } from '../../utils/formato';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { PresupuestosService } from '../../services/presupuestos.service';
+import { RegistroRapidoService } from '../../services/registro-rapido.service';
 import { ToastService } from '../../services/toast.service';
 import {
   capitalizar,
@@ -56,6 +57,7 @@ export class Inicio {
   private readonly auth = inject(AuthService);
   private readonly dialogo = inject(DialogoService);
   private readonly toast = inject(ToastService);
+  private readonly registroRapido = inject(RegistroRapidoService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly nombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
@@ -181,6 +183,10 @@ export class Inicio {
     this.presupuestosService.cargar();
     this.metasService.cargar();
     this.categoriasService.cargar();
+  }
+
+  protected registrar(): void {
+    this.registroRapido.abrir();
   }
 
   protected guardarSaldoInicial(): void {

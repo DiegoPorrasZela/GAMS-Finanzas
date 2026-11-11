@@ -13,12 +13,13 @@
         <option [value]="opcion.clave" [selected]="opcion.clave === mes()">{{ opcion.texto }}</option>
       }
     </select>
-    <a
-      routerLink="/movimientos"
+    <button
+      type="button"
+      (click)="registrar()"
       class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
     >
       + Registrar movimiento
-    </a>
+    </button>
   </div>
 </section>
 

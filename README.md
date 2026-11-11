@@ -23,6 +23,15 @@ Tecnológica del Perú (UTP).
 - **Movimientos automáticos:** al registrar el sueldo, el alquiler o un plan, se marca "Repetir
   automáticamente" (cada día, semana, quincena —el 15 y fin de mes— o mes, eligiendo el día o "último día del
   mes") y la app lo registra sola, ajustándose a meses de 28, 29, 30 o 31 días. Se pueden pausar, reanudar o eliminar.
+- **Registro rápido:** un botón "+" (en la barra inferior del celular y "+ Registrar" en la computadora) abre
+  desde cualquier pantalla un formulario corto: monto, descripción (sugiere lo que ya registraste antes y
+  completa la categoría y el monto), categoría y fecha.
+- **Pensada para el celular:** debajo de 1024 px la navegación pasa a una barra de pestañas abajo, al alcance
+  del pulgar (Inicio · Movimientos · + · Metas · Más). "Más" abre una hoja con la cuenta, Tipo de cambio,
+  Administración y Cerrar sesión.
+- **App instalable (PWA):** se puede instalar en el celular o la computadora con su ícono, abre a pantalla
+  completa y avisa cuando hay una versión nueva. Los datos del usuario nunca se guardan en caché: siempre
+  vienen del servidor.
 - **Saldo inicial:** desde Inicio se registra una sola vez el dinero con el que se empieza.
 - **Tipo de cambio:** conversión entre más de 160 monedas con historial y gráfico, usando la API pública
   [Frankfurter](https://frankfurter.dev).
@@ -32,7 +41,10 @@ Tecnológica del Perú (UTP).
 
 - Angular 22 (componentes standalone, signals, formularios reactivos)
 - Diálogos con el elemento nativo `<dialog>` (accesibles: foco atrapado, Esc, lector de pantalla)
-- Carga diferida de páginas (`loadComponent`): la carga inicial pesa 334 kB en vez de 501 kB
+- Carga diferida de páginas (`loadComponent`) y del registro rápido (`@defer (on idle)`): la carga inicial
+  pesa ~360 kB en vez de 501 kB
+- PWA con `@angular/service-worker`: `manifest.webmanifest`, íconos y `ngsw-config.json` (solo guarda en
+  caché los archivos de la app y la tipografía, nunca las respuestas del API)
 - Tipografía Inter con números de ancho fijo (`tabular-nums`) para que los montos queden alineados
 - Tailwind CSS 4
 - TypeScript y Vitest para las pruebas
@@ -52,7 +64,8 @@ El frontend nunca habla con la base de datos: todo pasa por el API, que valida l
 ```
 frontend/src/
 ├── app/
-│   ├── components/     Componentes reutilizables (gráfico de tasas)
+│   ├── components/     Componentes reutilizables: barra inferior del celular, registro rápido, diálogos,
+│   │                   notificaciones (toasts), logo y gráficos
 │   ├── guards/         Protegen las rutas según la sesión y el rol
 │   ├── interceptors/   Agregan el token JWT a cada petición al backend
 │   ├── models/         Tipos de datos (Movimiento, Categoria, Usuario)
@@ -102,3 +115,6 @@ La URL del API está en `src/environments/environment.development.ts` (desarroll
 `src/environments/environment.ts` (producción).
 
 Pruebas: `npm test`
+
+La app instalable (service worker) solo se activa en el build de producción (`npm run build`) o en el sitio
+desplegado; con `npm start` no se registra, para que los cambios se vean al instante mientras se desarrolla.

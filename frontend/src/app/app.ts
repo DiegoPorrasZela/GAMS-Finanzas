@@ -2,8 +2,12 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Dialogo } from './components/dialogo/dialogo';
 import { Logo } from './components/logo/logo';
+import { NavegacionMovil } from './components/navegacion-movil/navegacion-movil';
+import { RegistroRapido } from './components/registro-rapido/registro-rapido';
 import { Toasts } from './components/toasts/toasts';
 import { AuthService } from './services/auth.service';
+import { PwaService } from './services/pwa.service';
+import { RegistroRapidoService } from './services/registro-rapido.service';
 
 interface Enlace {
   ruta: string;
@@ -12,7 +16,16 @@ interface Enlace {
 }
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Dialogo, Logo, Toasts],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    Dialogo,
+    Logo,
+    NavegacionMovil,
+    RegistroRapido,
+    Toasts,
+  ],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
@@ -40,6 +53,19 @@ export class App {
     const admin: Enlace[] = this.esAdmin() ? [{ ruta: '/admin', texto: 'Admin', exacto: false }] : [];
     return [...privados, ...publicos, ...admin];
   });
+
+  private readonly registroRapido = inject(RegistroRapidoService);
+  // Se crea al iniciar la app para escuchar a tiempo si se puede instalar o si hay una versión nueva
+  private readonly pwa = inject(PwaService);
+  protected readonly sePuedeInstalar = this.pwa.sePuedeInstalar;
+
+  protected registrar(): void {
+    this.registroRapido.abrir();
+  }
+
+  protected instalar(): void {
+    this.pwa.instalar();
+  }
 
   protected cerrarSesion(): void {
     this.auth.cerrarSesion();
