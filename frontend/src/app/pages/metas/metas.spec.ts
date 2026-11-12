@@ -30,7 +30,11 @@ describe('Metas', () => {
     input.dispatchEvent(new Event('input'));
   };
   // Mensajes que se mostraron como notificaciones flotantes
-  const notificaciones = () => TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' | ');
+  const notificaciones = () =>
+    TestBed.inject(ToastService)
+      .toasts()
+      .map((t) => t.texto)
+      .join(' | ');
   const boton = (texto: string) =>
     [...pagina.querySelectorAll('button')].find((b) => b.textContent?.trim() === texto)!;
 
@@ -46,8 +50,26 @@ describe('Metas', () => {
     http.expectOne(`${api}/metas`).flush([laptop]);
     // Ganó S/ 3000 y separó S/ 2000 a ahorros; S/ 550 ya están en la meta → S/ 1450 libres en ahorros
     http.expectOne(`${api}/movimientos`).flush([
-      { id: 1, descripcion: 'Sueldo', monto: 3000, fecha: '2026-11-01', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
-      { id: 2, descripcion: 'Ahorro', monto: 2000, fecha: '2026-11-01', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false },
+      {
+        id: 1,
+        descripcion: 'Sueldo',
+        monto: 3000,
+        fecha: '2026-11-01',
+        tipo: 'INGRESO',
+        categoriaId: 1,
+        categoria: 'Sueldo',
+        automatico: false,
+      },
+      {
+        id: 2,
+        descripcion: 'Ahorro',
+        monto: 2000,
+        fecha: '2026-11-01',
+        tipo: 'GASTO',
+        categoriaId: 15,
+        categoria: 'Ahorro',
+        automatico: false,
+      },
     ]);
     http.expectOne(`${api}/categorias`).flush([
       { id: 1, nombre: 'Sueldo', tipo: 'INGRESO' },
@@ -71,11 +93,23 @@ describe('Metas', () => {
     boton('+ Aportar').click();
     await fixture.whenStable();
 
-    escribir('#monto-aporte-1', '5000');
+    escribir('#monto-aporte-1', '1800');
     pagina.querySelectorAll('form')[1].dispatchEvent(new Event('submit'));
     await fixture.whenStable();
 
     expect(notificaciones()).toContain('En tus ahorros tienes S/ 1450.00 libres');
+    // No se envió nada al backend (http.verify() lo comprueba)
+  });
+
+  it('should not send a contribution bigger than what the goal still needs', async () => {
+    boton('+ Aportar').click();
+    await fixture.whenStable();
+
+    escribir('#monto-aporte-1', '5000'); // a la meta le faltan S/ 1,950
+    pagina.querySelectorAll('form')[1].dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(notificaciones()).toContain('Solo te faltan S/ 1,950.00');
     // No se envió nada al backend (http.verify() lo comprueba)
   });
 
@@ -86,8 +120,22 @@ describe('Metas', () => {
     pagina.querySelector('#monto-ahorro')!.closest('form')!.dispatchEvent(new Event('submit'));
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
-    expect(peticion.request.body).toEqual({ descripcion: 'Ahorro', monto: 200, fecha: expect.any(String), categoriaId: 15 });
-    peticion.flush({ id: 3, descripcion: 'Ahorro', monto: 200, fecha: '2026-11-09', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false });
+    expect(peticion.request.body).toEqual({
+      descripcion: 'Ahorro',
+      monto: 200,
+      fecha: expect.any(String),
+      categoriaId: 15,
+    });
+    peticion.flush({
+      id: 3,
+      descripcion: 'Ahorro',
+      monto: 200,
+      fecha: '2026-11-09',
+      tipo: 'GASTO',
+      categoriaId: 15,
+      categoria: 'Ahorro',
+      automatico: false,
+    });
     await fixture.whenStable();
 
     expect(notificaciones()).toContain('Separaste S/ 200.00 a tus ahorros');
@@ -104,8 +152,23 @@ describe('Metas', () => {
     frecuencia.closest('form')!.dispatchEvent(new Event('submit'));
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
-    expect(peticion.request.body).toMatchObject({ monto: 25, categoriaId: 15, frecuencia: 'SEMANAL' });
-    peticion.flush({ id: 1, descripcion: 'Ahorro automático', monto: 25, tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', frecuencia: 'SEMANAL', dia: 9, proximoCargo: '2026-11-16', activo: true });
+    expect(peticion.request.body).toMatchObject({
+      monto: 25,
+      categoriaId: 15,
+      frecuencia: 'SEMANAL',
+    });
+    peticion.flush({
+      id: 1,
+      descripcion: 'Ahorro automático',
+      monto: 25,
+      tipo: 'GASTO',
+      categoriaId: 15,
+      categoria: 'Ahorro',
+      frecuencia: 'SEMANAL',
+      dia: 9,
+      proximoCargo: '2026-11-16',
+      activo: true,
+    });
     // El backend ya registró el de hoy: se vuelve a cargar la lista
     http.expectOne(`${api}/movimientos`).flush([]);
     await fixture.whenStable();
@@ -127,12 +190,41 @@ describe('Metas', () => {
   async function conAhorrosDe10y20() {
     TestBed.inject(MovimientosService).cargar();
     http.expectOne(`${api}/movimientos`).flush([
-      { id: 1, descripcion: 'Sueldo', monto: 100, fecha: '2026-11-01', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
-      { id: 2, descripcion: 'Ahorro', monto: 10.1, fecha: '2026-11-01', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false },
-      { id: 3, descripcion: 'Ahorro', monto: 20.2, fecha: '2026-11-02', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false },
+      {
+        id: 1,
+        descripcion: 'Sueldo',
+        monto: 100,
+        fecha: '2026-11-01',
+        tipo: 'INGRESO',
+        categoriaId: 1,
+        categoria: 'Sueldo',
+        automatico: false,
+      },
+      {
+        id: 2,
+        descripcion: 'Ahorro',
+        monto: 10.1,
+        fecha: '2026-11-01',
+        tipo: 'GASTO',
+        categoriaId: 15,
+        categoria: 'Ahorro',
+        automatico: false,
+      },
+      {
+        id: 3,
+        descripcion: 'Ahorro',
+        monto: 20.2,
+        fecha: '2026-11-02',
+        tipo: 'GASTO',
+        categoriaId: 15,
+        categoria: 'Ahorro',
+        automatico: false,
+      },
     ]);
     TestBed.inject(MetasService).cargar();
-    http.expectOne(`${api}/metas`).flush([{ ...laptop, ahorrado: 0, faltante: 2500, porcentaje: 0, aportes: [] }]);
+    http
+      .expectOne(`${api}/metas`)
+      .flush([{ ...laptop, ahorrado: 0, faltante: 2500, porcentaje: 0, aportes: [] }]);
     await fixture.whenStable();
   }
 
@@ -173,8 +265,22 @@ describe('Metas', () => {
     pagina.querySelector('form')!.dispatchEvent(new Event('submit'));
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/metas` });
-    expect(peticion.request.body).toEqual({ nombre: 'Viaje', montoObjetivo: 800, fechaLimite: null });
-    peticion.flush({ ...laptop, id: 2, nombre: 'Viaje', montoObjetivo: 800, fechaLimite: null, ahorrado: 0, faltante: 800, porcentaje: 0, aportes: [] });
+    expect(peticion.request.body).toEqual({
+      nombre: 'Viaje',
+      montoObjetivo: 800,
+      fechaLimite: null,
+    });
+    peticion.flush({
+      ...laptop,
+      id: 2,
+      nombre: 'Viaje',
+      montoObjetivo: 800,
+      fechaLimite: null,
+      ahorrado: 0,
+      faltante: 800,
+      porcentaje: 0,
+      aportes: [],
+    });
     await fixture.whenStable();
 
     expect(notificaciones()).toContain('Meta "Viaje" creada');

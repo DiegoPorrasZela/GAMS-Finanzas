@@ -110,6 +110,8 @@ export class GraficoTasas {
     if (i === null) return null;
     const tasa = this.tasas()[i];
     const punto = this.puntos()[i];
+    // Si llegaron datos nuevos con menos días (ej. de "5 años" a "1 mes"), ese punto ya no existe
+    if (!tasa || !punto) return null;
     // Mantiene el tooltip dentro del gráfico
     const izquierda = Math.min(Math.max(punto.x, 70), this.ancho() - 70);
     return { tasa, punto, izquierda, fecha: this.fechaLarga(tasa.date) };

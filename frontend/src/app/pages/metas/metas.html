@@ -363,13 +363,16 @@
 
         <!-- Acciones de aportes -->
         <div class="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            (click)="abrirAporte(meta)"
-            class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
-          >
-            + Aportar
-          </button>
+          <!-- Una meta cumplida ya no recibe aportes -->
+          @if (meta.faltante > 0) {
+            <button
+              type="button"
+              (click)="abrirAporte(meta)"
+              class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+            >
+              + Aportar
+            </button>
+          }
           @if (meta.aportes.length > 0) {
             <button
               type="button"
@@ -436,10 +439,11 @@
             <div class="flex gap-2">
               <button
                 type="submit"
-                class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                [disabled]="guardandoAporte()"
+                class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-70"
                 [title]="'Sale de tus ahorros libres (S/ ' + (libres() | number: '1.2-2') + ')'"
               >
-                Guardar
+                {{ guardandoAporte() ? 'Guardando…' : 'Guardar' }}
               </button>
               <button
                 type="button"

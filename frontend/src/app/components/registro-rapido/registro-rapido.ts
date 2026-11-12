@@ -53,7 +53,8 @@ export class RegistroRapido {
   private readonly hoja = viewChild.required<ElementRef<HTMLDialogElement>>('hoja');
 
   protected readonly abierto = this.servicio.abierto;
-  protected readonly hoy = hoy();
+  // Signal: se refresca cada vez que se abre, por si la app quedó abierta de un día para otro
+  protected readonly hoy = signal(hoy());
   protected readonly tipo = signal<TipoMovimiento>('gasto');
   protected readonly enviado = signal(false);
   protected readonly guardando = signal(false);
@@ -64,7 +65,7 @@ export class RegistroRapido {
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
     descripcion: ['', [Validators.required, Validators.maxLength(60)]],
     categoriaId: this.fb.control<number | null>(null, Validators.required),
-    fecha: [this.hoy, [Validators.required, noFutura]],
+    fecha: [this.hoy(), [Validators.required, noFutura]],
   });
 
   // Pago en dólares o euros: se convierte a soles con el tipo de cambio del día del gasto
@@ -74,7 +75,7 @@ export class RegistroRapido {
     initialValue: 'PEN' as Moneda,
   });
   private readonly fecha = toSignal(this.formulario.controls.fecha.valueChanges, {
-    initialValue: this.hoy,
+    initialValue: this.hoy(),
   });
   private readonly montoEscrito = toSignal(this.formulario.controls.monto.valueChanges, {
     initialValue: null,
@@ -241,6 +242,7 @@ export class RegistroRapido {
   }
 
   private preparar(): void {
+    this.hoy.set(hoy());
     this.categoriasService.cargar();
     this.movimientosService.cargar();
     this.tipo.set('gasto');
@@ -249,7 +251,7 @@ export class RegistroRapido {
       monto: null,
       descripcion: '',
       categoriaId: null,
-      fecha: this.hoy,
+      fecha: this.hoy(),
     });
     this.enviado.set(false);
     this.error.set(null);

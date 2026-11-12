@@ -68,12 +68,19 @@ export class Admin {
 
   // ---- Usuarios ----
   protected readonly usuarios = signal<Usuario[]>([]);
+  protected readonly estadoUsuarios = signal<'cargando' | 'listo' | 'error'>('cargando');
 
   constructor() {
     this.categoriasService.cargar();
     this.usuariosService.listar().subscribe({
-      next: (lista) => this.usuarios.set(lista),
-      error: (e) => this.mostrar(mensajeDeError(e), true),
+      next: (lista) => {
+        this.usuarios.set(lista);
+        this.estadoUsuarios.set('listo');
+      },
+      error: (e) => {
+        this.estadoUsuarios.set('error');
+        this.mostrar(mensajeDeError(e), true);
+      },
     });
   }
 

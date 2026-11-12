@@ -21,7 +21,7 @@ import { ToastService } from '../../services/toast.service';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
-import { hoy, mesesHasta, textoFrecuencia } from '../../utils/fechas';
+import { hoy, mesesHasta, primeraFecha, textoFrecuencia } from '../../utils/fechas';
 import { esMayor, restar, sumar } from '../../utils/dinero';
 import { ddmmaaaa, soles } from '../../utils/formato';
 import { noFutura, noPasada } from '../../utils/validadores';
@@ -99,6 +99,7 @@ export class Metas {
 
   // ---- Aportes ----
   protected readonly aportandoA = signal<number | null>(null);
+  protected readonly guardandoAporte = signal(false);
   protected readonly verAportesDe = signal<number | null>(null);
   protected readonly formAporte = this.fb.group({
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
@@ -194,10 +195,15 @@ export class Metas {
         this.guardandoAhorro.set(false);
         this.accion.set(null);
         if (automatico) {
-          // El backend ya registró el de hoy: se vuelve a cargar la lista
+          // Si el primero es hoy, el backend ya lo registró: se vuelve a cargar la lista
           this.movimientosService.cargar();
+          // Misma regla que el backend: sin día indicado, usa el día de hoy (la quincena es el 15 o fin de mes)
+          const primera = primeraFecha(this.hoy, frecuencia, Number(this.hoy.slice(8, 10)));
           this.mostrar(
-            `Se separarán S/ ${monto!.toFixed(2)} a tus ahorros ${CADA[frecuencia as Frecuencia]}. El de hoy ya se separó.`,
+            `Se separarán S/ ${monto!.toFixed(2)} a tus ahorros ${CADA[frecuencia as Frecuencia]}. ` +
+              (primera <= this.hoy
+                ? 'El de hoy ya se separó.'
+                : `El primero será el ${ddmmaaaa(primera)}.`),
           );
         } else {
           this.mostrar(
@@ -248,6 +254,14 @@ export class Metas {
       fechaLimite: fechaLimite || null,
     };
     const editando = this.editando();
+    // El objetivo no puede quedar por debajo de lo ya ahorrado (el backend aplica la misma regla)
+    if (editando && esMayor(editando.ahorrado, datos.montoObjetivo)) {
+      this.mostrar(
+        `Ya ahorraste ${soles(editando.ahorrado)} en esta meta: el objetivo no puede ser menor.`,
+        true,
+      );
+      return;
+    }
     const peticion = editando
       ? this.servicio.actualizar(editando.id, datos)
       : this.servicio.crear(datos);
@@ -310,9 +324,17 @@ export class Metas {
 
   protected guardarAporte(meta: MetaAhorro): void {
     this.formAporte.markAllAsTouched();
-    if (this.formAporte.invalid) return;
+    if (this.formAporte.invalid || this.guardandoAporte()) return;
 
     const { monto, fecha } = this.formAporte.getRawValue();
+    // Una meta no recibe más de lo que le falta (el backend aplica la misma regla)
+    if (esMayor(monto!, meta.faltante)) {
+      this.mostrar(
+        `Solo te faltan ${soles(meta.faltante)} para cumplir "${meta.nombre}": no puedes aportar más que eso.`,
+        true,
+      );
+      return;
+    }
     // Los aportes salen de los ahorros libres
     if (esMayor(monto!, this.libres())) {
       this.mostrar(
@@ -323,8 +345,11 @@ export class Metas {
       );
       return;
     }
+    // Evita que un doble clic registre el aporte dos veces
+    this.guardandoAporte.set(true);
     this.servicio.aportar(meta.id, { monto: monto!, fecha }).subscribe({
       next: (actualizada) => {
+        this.guardandoAporte.set(false);
         this.aportandoA.set(null);
         this.mostrar(
           actualizada.porcentaje >= 100
@@ -332,7 +357,10 @@ export class Metas {
             : `Aporte de S/ ${monto!.toFixed(2)} registrado en "${actualizada.nombre}".`,
         );
       },
-      error: (e) => this.mostrar(mensajeDeError(e), true),
+      error: (e) => {
+        this.guardandoAporte.set(false);
+        this.mostrar(mensajeDeError(e), true);
+      },
     });
   }
 
