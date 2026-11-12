@@ -10,8 +10,9 @@ Tecnológica del Perú (UTP).
 ## Funcionalidades
 
 - **Cuentas de usuario:** registro, inicio y cierre de sesión. La sesión dura 8 horas (token JWT).
-- **Inicio (resumen del mes):** saldo total, ingresos y gastos del mes elegido, gráfico de gastos por
-  categoría ("¿en qué se va tu dinero?") y últimos movimientos.
+- **Inicio (resumen del mes):** saldo total, ingresos y gastos del mes elegido, gastos por categoría ("¿en qué
+  se va tu dinero?"), últimos movimientos y un gráfico de **ingresos contra gastos de los últimos 6 meses**
+  (con detalle al pasar el mouse o con el teclado, y la opción "Ver como tabla").
 - **Mi presupuesto:** defines cuánto quieres gastar como máximo y cuánto ahorrar cada mes. Una barra muestra
   lo gastado, avisa al pasar el 80 % o el límite, y calcula cuánto puedes gastar por día lo que queda del mes.
 - **Ahorros y metas:** separas dinero de tu saldo a tus ahorros (una vez, o cada día, semana o mes) y desde
@@ -20,6 +21,14 @@ Tecnológica del Perú (UTP).
   Movimientos pero no cuenta como gasto.
 - **Movimientos:** registrar, editar, eliminar, filtrar por mes, tipo o categoría y buscar. No se aceptan
   fechas futuras, y si un gasto deja el saldo en negativo la app avisa antes de guardarlo.
+  - **Agrupados por día** ("Hoy", "Ayer", "Lunes, 3 de noviembre") con cuánto cambió el saldo ese día, y de a
+    30 con "Ver más".
+  - **Cada categoría con su ícono y color** (Comida naranja, Transporte azul…), elegidos por el administrador.
+  - **Gastos en dólares o euros:** se escribe el monto en la moneda en que se pagó y la app lo convierte a
+    soles con el tipo de cambio de ese día (Frankfurter). Se guardan los dos montos.
+  - **Eliminar con "Deshacer":** el movimiento desaparece al instante y durante 5 segundos se puede
+    recuperar; recién entonces se borra en el servidor.
+  - **Descargar Excel (CSV):** exporta lo que se ve con los filtros actuales.
 - **Movimientos automáticos:** al registrar el sueldo, el alquiler o un plan, se marca "Repetir
   automáticamente" (cada día, semana, quincena —el 15 y fin de mes— o mes, eligiendo el día o "último día del
   mes") y la app lo registra sola, ajustándose a meses de 28, 29, 30 o 31 días. Se pueden pausar, reanudar o eliminar.
@@ -46,6 +55,9 @@ Tecnológica del Perú (UTP).
 - PWA con `@angular/service-worker`: `manifest.webmanifest`, íconos y `ngsw-config.json` (solo guarda en
   caché los archivos de la app y la tipografía, nunca las respuestas del API)
 - Tipografía Inter con números de ancho fijo (`tabular-nums`) para que los montos queden alineados
+- Íconos SVG propios (`components/icono`) en lugar de emojis, que se ven distinto en cada sistema
+- Esqueletos de carga (clase `esqueleto` de Tailwind) mientras llegan los datos la primera vez
+- Gráfico de 6 meses con colores validados para daltonismo, leyenda, detalle por teclado y vista de tabla
 - Tailwind CSS 4
 - TypeScript y Vitest para las pruebas
 
@@ -71,7 +83,7 @@ frontend/src/
 │   ├── models/         Tipos de datos (Movimiento, Categoria, Usuario)
 │   ├── pages/          Pantallas: inicio, movimientos, metas, tipo-cambio, admin, login, registro, acerca
 │   ├── services/       Comunicación con el API y estado de la sesión
-│   └── utils/          Ayudas para fechas y meses
+│   └── utils/          Ayudas para fechas, formato de montos y exportación a CSV
 └── environments/       URL del API en desarrollo y en producción
 ```
 
@@ -97,6 +109,8 @@ en el backend, que rechaza cualquier petición sin permiso aunque alguien salte 
 | Guard | `guards/auth.guards.ts` | Decidir si se puede entrar a una ruta |
 | Adapter | Funciones `desdeApi()` de los servicios | Convertir el formato del API (`INGRESO`) al de la app (`ingreso`) |
 | Mediator | `DialogoService` + `<app-dialogo>` | Cualquier página pide una confirmación (`await dialogo.confirmar(...)`) sin conocer al componente que la dibuja |
+| Command (con deshacer) | `MovimientosService.eliminarConDeshacer()` | La eliminación queda como una orden pendiente que se ejecuta a los 5 s o se cancela con "Deshacer" |
+| Observer (eventos de la sesión) | `AuthService.alCerrarSesion()` | Antes de cerrar sesión se envían las eliminaciones pendientes, con el token todavía vigente |
 
 ## Cómo ejecutar
 

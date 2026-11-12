@@ -36,15 +36,23 @@ export type Frecuencia = 'DIARIA' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
 // En la frecuencia mensual, el día 31 significa "el último día del mes" (28, 29, 30 o 31)
 export const ULTIMO_DIA = 31;
 
+// Monedas en que se puede registrar un pago. El monto siempre se guarda en soles;
+// si se pagó en dólares o euros, también se guarda el monto original.
+export type Moneda = 'PEN' | 'USD' | 'EUR';
+export type MonedaExtranjera = Exclude<Moneda, 'PEN'>;
+export const SIMBOLO_MONEDA: Record<Moneda, string> = { PEN: 'S/', USD: 'US$', EUR: '€' };
+
 export interface Movimiento {
   id: number;
   descripcion: string;
-  monto: number;
+  monto: number; // en soles
   fecha: string; // AAAA-MM-DD
   tipo: TipoMovimiento;
   categoriaId: number;
   categoria: string; // nombre de la categoría
   automatico: boolean; // lo registró un movimiento automático (ej. el sueldo)
+  monedaOriginal: MonedaExtranjera | null; // null si se pagó en soles
+  montoOriginal: number | null;
 }
 
 // Ingreso, gasto o ahorro que se registra solo cada día, semana o mes
@@ -64,15 +72,26 @@ export interface Recurrente {
 // Lo que se envía al crear o editar (el tipo lo define la categoría)
 export interface DatosMovimiento {
   descripcion: string;
-  monto: number;
+  monto: number; // en soles
   fecha: string;
   categoriaId: number;
+  monedaOriginal?: MonedaExtranjera;
+  montoOriginal?: number;
 }
 
 export interface Categoria {
   id: number;
   nombre: string;
   tipo: TipoMovimiento;
+  icono: string; // clave del ícono (ej. "comida")
+  color: string; // clave del color (ej. "naranja")
+}
+
+export interface DatosCategoria {
+  nombre: string;
+  tipo: TipoMovimiento;
+  icono: string;
+  color: string;
 }
 
 // Plan de un mes: cuánto se quiere gastar como máximo y cuánto ahorrar

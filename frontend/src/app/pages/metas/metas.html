@@ -15,7 +15,10 @@
     class="flex flex-col gap-4 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between"
   >
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">🐷 Mis ahorros</h2>
+      <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
+        <app-icono nombre="alcancia" class="size-5 text-sky-600" />
+        Mis ahorros
+      </h2>
       <p class="text-sm text-gray-500">
         Separa dinero de tu saldo y desde aquí repártelo a tus metas.
       </p>
@@ -41,21 +44,33 @@
   <div class="grid gap-6 p-6 sm:grid-cols-3">
     <div>
       <p class="text-sm text-gray-500">Libres en tus ahorros</p>
-      <p class="mt-1 text-2xl font-bold text-sky-700" [class.text-red-600!]="libres() < 0">
-        S/ {{ libres() | number: '1.2-2' }}
-      </p>
+      @if (cargandoResumen()) {
+        <p class="esqueleto mt-2 h-7 w-28"></p>
+      } @else {
+        <p class="mt-1 text-2xl font-bold text-sky-700" [class.text-red-600!]="libres() < 0">
+          S/ {{ libres() | number: '1.2-2' }}
+        </p>
+      }
       <p class="text-xs text-gray-500">Para aportar a tus metas o retirar</p>
     </div>
     <div>
       <p class="text-sm text-gray-500">En tus metas</p>
-      <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
+      @if (cargandoResumen()) {
+        <p class="esqueleto mt-2 h-7 w-24"></p>
+      } @else {
+        <p class="mt-1 text-2xl font-bold text-green-600">S/ {{ enMetas() | number: '1.2-2' }}</p>
+      }
       <p class="text-xs text-gray-500">Ya repartido entre tus metas</p>
     </div>
     <div>
       <p class="text-sm text-gray-500">Total ahorrado</p>
-      <p class="mt-1 text-2xl font-bold text-gray-900">
-        S/ {{ totalAhorrado() | number: '1.2-2' }}
-      </p>
+      @if (cargandoResumen()) {
+        <p class="esqueleto mt-2 h-7 w-28"></p>
+      } @else {
+        <p class="mt-1 text-2xl font-bold text-gray-900">
+          S/ {{ totalAhorrado() | number: '1.2-2' }}
+        </p>
+      }
       <p class="text-xs text-gray-500">Tu saldo para gastar: S/ {{ saldo() | number: '1.2-2' }}</p>
     </div>
   </div>
@@ -73,7 +88,10 @@
             {{ tipo === 'separar' ? '¿Cuánto separas?' : '¿Cuánto retiras?' }}
           </label>
           <div class="relative mt-1">
-            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+            <span
+              class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+              >S/</span
+            >
             <input
               id="monto-ahorro"
               type="number"
@@ -83,7 +101,9 @@
               formControlName="monto"
               placeholder="0.00"
               class="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 focus:outline-none"
-              [class.border-red-500!]="formAhorro.controls.monto.invalid && formAhorro.controls.monto.touched"
+              [class.border-red-500!]="
+                formAhorro.controls.monto.invalid && formAhorro.controls.monto.touched
+              "
             />
           </div>
         </div>
@@ -98,10 +118,10 @@
               class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 focus:outline-none"
             >
               <option value="UNA_VEZ">Solo esta vez</option>
-              <option value="DIARIA">🔁 Cada día</option>
-              <option value="SEMANAL">🔁 Cada semana</option>
-              <option value="QUINCENAL">🔁 Cada quincena (15 y fin de mes)</option>
-              <option value="MENSUAL">🔁 Cada mes</option>
+              <option value="DIARIA">Cada día</option>
+              <option value="SEMANAL">Cada semana</option>
+              <option value="QUINCENAL">Cada quincena (15 y fin de mes)</option>
+              <option value="MENSUAL">Cada mes</option>
             </select>
           </div>
         }
@@ -125,10 +145,10 @@
       <p class="mt-3 text-xs text-gray-500">
         @if (tipo === 'separar') {
           Sale de tu saldo (S/ {{ saldo() | number: '1.2-2' }}) y aparece en Movimientos como
-          "🐷 Ahorro". No cuenta como gasto: cuenta como ahorro.
+          "Ahorro". No cuenta como gasto: cuenta como ahorro.
         } @else {
-          Vuelve a tu saldo. Puedes retirar hasta S/ {{ libres() | number: '1.2-2' }}: lo que ya está
-          en tus metas no se retira (primero quita el aporte).
+          Vuelve a tu saldo. Puedes retirar hasta S/ {{ libres() | number: '1.2-2' }}: lo que ya
+          está en tus metas no se retira (primero quita el aporte).
         }
       </p>
     </form>
@@ -137,9 +157,13 @@
   @if (ahorrosAutomaticos().length > 0) {
     <ul class="divide-y divide-gray-100 border-t border-gray-200">
       @for (recurrente of ahorrosAutomaticos(); track recurrente.id) {
-        <li class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 text-sm" [class.opacity-60]="!recurrente.activo">
-          <span class="text-gray-700">
-            🔁 <strong>S/ {{ recurrente.monto | number: '1.2-2' }}</strong>
+        <li
+          class="flex flex-wrap items-center justify-between gap-2 px-6 py-3 text-sm"
+          [class.opacity-60]="!recurrente.activo"
+        >
+          <span class="inline-flex flex-wrap items-center gap-x-1.5 text-gray-700">
+            <app-icono nombre="repetir" class="size-4 text-gray-500" />
+            <strong>S/ {{ recurrente.monto | number: '1.2-2' }}</strong>
             {{ textoFrecuencia(recurrente).toLowerCase() }}
             <span class="text-gray-500">
               ·
@@ -184,7 +208,9 @@
 
     <form [formGroup]="formulario" (ngSubmit)="guardarMeta()" novalidate class="mt-4 space-y-4">
       <div>
-        <label for="nombre-meta" class="block text-sm font-medium text-gray-700">¿Para qué ahorras?</label>
+        <label for="nombre-meta" class="block text-sm font-medium text-gray-700"
+          >¿Para qué ahorras?</label
+        >
         <input
           id="nombre-meta"
           type="text"
@@ -201,7 +227,10 @@
       <div>
         <label for="objetivo" class="block text-sm font-medium text-gray-700">Monto objetivo</label>
         <div class="relative mt-1">
-          <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+          <span
+            class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+            >S/</span
+          >
           <input
             id="objetivo"
             type="number"
@@ -267,8 +296,12 @@
       >
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <h2 class="truncate text-lg font-semibold text-gray-900">
-              {{ meta.porcentaje >= 100 ? '🎉 ' : '' }}{{ meta.nombre }}
+            <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              @if (meta.porcentaje >= 100) {
+                <app-icono nombre="trofeo" class="size-5 text-amber-500" />
+                <span class="sr-only">Meta cumplida:</span>
+              }
+              <span class="truncate">{{ meta.nombre }}</span>
             </h2>
             <p class="text-sm text-gray-500">
               Objetivo: S/ {{ meta.montoObjetivo | number: '1.2-2' }}
@@ -278,10 +311,18 @@
             </p>
           </div>
           <div class="flex shrink-0 gap-3 text-sm">
-            <button type="button" (click)="editarMeta(meta)" class="font-medium text-gray-500 hover:text-green-700">
+            <button
+              type="button"
+              (click)="editarMeta(meta)"
+              class="font-medium text-gray-500 hover:text-green-700"
+            >
               Editar
             </button>
-            <button type="button" (click)="eliminarMeta(meta)" class="font-medium text-gray-500 hover:text-red-600">
+            <button
+              type="button"
+              (click)="eliminarMeta(meta)"
+              class="font-medium text-gray-500 hover:text-red-600"
+            >
               Eliminar
             </button>
           </div>
@@ -291,7 +332,8 @@
         <div class="mt-4">
           <div class="flex items-baseline justify-between text-sm">
             <p class="text-gray-700">
-              Ahorraste <strong class="text-gray-900">S/ {{ meta.ahorrado | number: '1.2-2' }}</strong>
+              Ahorraste
+              <strong class="text-gray-900">S/ {{ meta.ahorrado | number: '1.2-2' }}</strong>
             </p>
             <span class="font-semibold text-gray-900">{{ meta.porcentaje }} %</span>
           </div>
@@ -306,12 +348,12 @@
               ¡Meta cumplida! Ya juntaste todo lo que necesitabas.
             } @else if (sugerencia(meta); as s) {
               @if (s.vencida) {
-                La fecha límite ya pasó y te faltan S/ {{ meta.faltante | number: '1.2-2' }}.
-                Puedes editar la meta para ponerle una nueva fecha.
+                La fecha límite ya pasó y te faltan S/ {{ meta.faltante | number: '1.2-2' }}. Puedes
+                editar la meta para ponerle una nueva fecha.
               } @else {
                 Te faltan S/ {{ meta.faltante | number: '1.2-2' }}: ahorra unos
-                <strong>S/ {{ s.porMes | number: '1.2-2' }} al mes</strong> durante
-                {{ s.meses }} {{ s.meses === 1 ? 'mes' : 'meses' }} para llegar a tiempo.
+                <strong>S/ {{ s.porMes | number: '1.2-2' }} al mes</strong> durante {{ s.meses }}
+                {{ s.meses === 1 ? 'mes' : 'meses' }} para llegar a tiempo.
               }
             } @else {
               Te faltan S/ {{ meta.faltante | number: '1.2-2' }}.
@@ -334,7 +376,9 @@
               (click)="alternarAportes(meta)"
               class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              {{ verAportesDe() === meta.id ? 'Ocultar' : 'Ver' }} aportes ({{ meta.aportes.length }})
+              {{ verAportesDe() === meta.id ? 'Ocultar' : 'Ver' }} aportes ({{
+                meta.aportes.length
+              }})
             </button>
           }
         </div>
@@ -347,9 +391,16 @@
             class="mt-4 flex flex-col gap-3 rounded-lg bg-gray-50 p-4 sm:flex-row sm:items-end"
           >
             <div class="flex-1">
-              <label [for]="'monto-aporte-' + meta.id" class="block text-sm font-medium text-gray-700">Monto</label>
+              <label
+                [for]="'monto-aporte-' + meta.id"
+                class="block text-sm font-medium text-gray-700"
+                >Monto</label
+              >
               <div class="relative mt-1">
-                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+                <span
+                  class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+                  >S/</span
+                >
                 <input
                   [id]="'monto-aporte-' + meta.id"
                   type="number"
@@ -359,19 +410,27 @@
                   formControlName="monto"
                   placeholder="0.00"
                   class="w-full rounded-md border border-gray-300 bg-white py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-                  [class.border-red-500!]="formAporte.controls.monto.invalid && formAporte.controls.monto.touched"
+                  [class.border-red-500!]="
+                    formAporte.controls.monto.invalid && formAporte.controls.monto.touched
+                  "
                 />
               </div>
             </div>
             <div>
-              <label [for]="'fecha-aporte-' + meta.id" class="block text-sm font-medium text-gray-700">Fecha</label>
+              <label
+                [for]="'fecha-aporte-' + meta.id"
+                class="block text-sm font-medium text-gray-700"
+                >Fecha</label
+              >
               <input
                 [id]="'fecha-aporte-' + meta.id"
                 type="date"
                 [max]="hoy"
                 formControlName="fecha"
                 class="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-                [class.border-red-500!]="formAporte.controls.fecha.invalid && formAporte.controls.fecha.touched"
+                [class.border-red-500!]="
+                  formAporte.controls.fecha.invalid && formAporte.controls.fecha.touched
+                "
               />
             </div>
             <div class="flex gap-2">
@@ -402,14 +461,16 @@
               <li class="flex items-center justify-between px-4 py-2 text-sm">
                 <span class="text-gray-500">{{ aporte.fecha | date: 'dd/MM/yyyy' }}</span>
                 <span class="flex items-center gap-3">
-                  <span class="font-semibold text-green-600">+ S/ {{ aporte.monto | number: '1.2-2' }}</span>
+                  <span class="font-semibold text-green-600"
+                    >+ S/ {{ aporte.monto | number: '1.2-2' }}</span
+                  >
                   <button
                     type="button"
                     (click)="quitarAporte(meta, aporte)"
                     [attr.aria-label]="'Eliminar aporte de ' + aporte.monto"
-                    class="text-gray-500 hover:text-red-600"
+                    class="rounded p-0.5 text-gray-500 hover:text-red-600"
                   >
-                    ✕
+                    <app-icono nombre="cerrar" class="size-4" />
                   </button>
                 </span>
               </li>
@@ -420,7 +481,12 @@
     } @empty {
       <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
         @if (cargando()) {
-          <p class="text-gray-500">Cargando metas…</p>
+          <p class="sr-only">Cargando metas…</p>
+          <div class="space-y-3 text-left" aria-hidden="true">
+            <span class="esqueleto block h-5 w-1/3"></span>
+            <span class="esqueleto block h-3 w-full rounded-full"></span>
+            <span class="esqueleto block h-4 w-1/2"></span>
+          </div>
         } @else {
           <p class="font-medium text-gray-900">Todavía no tienes metas de ahorro.</p>
           <p class="mt-1 text-sm text-gray-500">

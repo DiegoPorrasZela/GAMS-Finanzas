@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { Tasa, TipoCambioService } from '../../services/tipo-cambio.service';
 import { GraficoTasas } from '../../components/grafico-tasas/grafico-tasas';
+import { Icono } from '../../components/icono/icono';
 
 // Se muestran primero en los selectores
 const POPULARES = [
@@ -34,7 +35,7 @@ interface OpcionMoneda {
 }
 
 @Component({
-  imports: [DatePipe, GraficoTasas],
+  imports: [DatePipe, GraficoTasas, Icono],
   selector: 'app-tipo-cambio',
   styleUrl: './tipo-cambio.css',
   templateUrl: './tipo-cambio.html',

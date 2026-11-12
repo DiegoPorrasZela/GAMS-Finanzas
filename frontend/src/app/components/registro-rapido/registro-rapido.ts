@@ -9,18 +9,29 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Movimiento, TipoMovimiento, clasificar, esCategoriaDelSistema } from '../../models/finanzas.models';
+import { Icono } from '../icono/icono';
+import {
+  DatosMovimiento,
+  Moneda,
+  Movimiento,
+  SIMBOLO_MONEDA,
+  TipoMovimiento,
+  clasificar,
+  esCategoriaDelSistema,
+} from '../../models/finanzas.models';
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RegistroRapidoService } from '../../services/registro-rapido.service';
+import { aSoles, conversionASoles } from '../../services/tipo-cambio.service';
 import { ToastService } from '../../services/toast.service';
 import { hoy } from '../../utils/fechas';
-import { soles } from '../../utils/formato';
+import { ddmmaaaa, enMoneda, soles } from '../../utils/formato';
 import { noFutura } from '../../utils/validadores';
 
 // Registro rápido de un ingreso o gasto desde cualquier pantalla.
@@ -28,7 +39,7 @@ import { noFutura } from '../../utils/validadores';
 // Las opciones avanzadas (repetir automáticamente) siguen en la página Movimientos.
 @Component({
   selector: 'app-registro-rapido',
-  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, Icono],
   templateUrl: './registro-rapido.html',
 })
 export class RegistroRapido {
@@ -48,10 +59,30 @@ export class RegistroRapido {
   protected readonly error = signal<string | null>(null);
 
   protected readonly formulario = this.fb.group({
+    moneda: this.fb.control<Moneda>('PEN'),
     monto: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
     descripcion: ['', [Validators.required, Validators.maxLength(60)]],
     categoriaId: this.fb.control<number | null>(null, Validators.required),
     fecha: [this.hoy, [Validators.required, noFutura]],
+  });
+
+  // Pago en dólares o euros: se convierte a soles con el tipo de cambio del día del gasto
+  protected readonly SIMBOLO_MONEDA = SIMBOLO_MONEDA;
+  protected readonly ddmmaaaa = ddmmaaaa;
+  protected readonly moneda = toSignal(this.formulario.controls.moneda.valueChanges, {
+    initialValue: 'PEN' as Moneda,
+  });
+  private readonly fecha = toSignal(this.formulario.controls.fecha.valueChanges, {
+    initialValue: this.hoy,
+  });
+  private readonly montoEscrito = toSignal(this.formulario.controls.monto.valueChanges, {
+    initialValue: null,
+  });
+  protected readonly conversion = conversionASoles(this.moneda, this.fecha);
+  protected readonly montoEnSoles = computed(() => {
+    const monto = this.montoEscrito();
+    const conversion = this.conversion();
+    return monto && conversion.estado === 'lista' ? aSoles(monto, conversion.tasa) : null;
   });
 
   // Saldo inicial y ahorros tienen su propio lugar (Inicio y Metas): aquí solo ingresos y gastos
@@ -115,7 +146,10 @@ export class RegistroRapido {
       this.formulario.controls.categoriaId.setValue(anterior.categoriaId);
     }
     if (this.formulario.controls.monto.value === null) {
-      this.formulario.controls.monto.setValue(anterior.monto);
+      this.formulario.patchValue({
+        moneda: anterior.monedaOriginal ?? 'PEN',
+        monto: anterior.montoOriginal ?? anterior.monto,
+      });
     }
   }
 
@@ -123,11 +157,37 @@ export class RegistroRapido {
     this.enviado.set(true);
     if (this.formulario.invalid || this.guardando()) return;
 
-    const { monto, descripcion, categoriaId, fecha } = this.formulario.getRawValue();
+    const { moneda, monto, descripcion, categoriaId, fecha } = this.formulario.getRawValue();
     const tipo = this.tipo();
 
+    // En dólares o euros se guarda en soles con la tasa del día (y también el monto original)
+    let montoEnSoles = monto!;
+    if (moneda !== 'PEN') {
+      const conversion = this.conversion();
+      if (conversion.estado !== 'lista') {
+        this.error.set(
+          conversion.estado === 'cargando'
+            ? 'Un momento: estamos consultando el tipo de cambio.'
+            : 'No se pudo consultar el tipo de cambio. Revisa tu conexión o registra el monto en soles.',
+        );
+        return;
+      }
+      montoEnSoles = aSoles(monto!, conversion.tasa);
+    }
+    const datos: DatosMovimiento = {
+      descripcion: descripcion.trim(),
+      monto: montoEnSoles,
+      categoriaId: categoriaId!,
+      fecha,
+      ...(moneda !== 'PEN' ? { monedaOriginal: moneda, montoOriginal: monto! } : {}),
+    };
+    const montoTexto =
+      moneda === 'PEN'
+        ? soles(montoEnSoles)
+        : `${enMoneda(monto!, SIMBOLO_MONEDA[moneda])} (${soles(montoEnSoles)})`;
+
     // Misma regla que en Movimientos: un gasto que deja el saldo en negativo se avisa, no se bloquea
-    const saldoNuevo = calcularTotales(this.movimientosService.movimientos()).saldo - monto!;
+    const saldoNuevo = calcularTotales(this.movimientosService.movimientos()).saldo - montoEnSoles;
     if (
       tipo === 'gasto' &&
       saldoNuevo < 0 &&
@@ -146,21 +206,19 @@ export class RegistroRapido {
 
     this.guardando.set(true);
     this.error.set(null);
-    this.movimientosService
-      .agregar({ descripcion: descripcion.trim(), monto: monto!, categoriaId: categoriaId!, fecha })
-      .subscribe({
-        next: () => {
-          this.guardando.set(false);
-          this.servicio.cerrar();
-          this.toast.exito(
-            `${tipo === 'ingreso' ? 'Ingreso' : 'Gasto'} registrado: ${descripcion.trim()} · ${soles(monto!)}`,
-          );
-        },
-        error: (e) => {
-          this.guardando.set(false);
-          this.error.set(mensajeDeError(e));
-        },
-      });
+    this.movimientosService.agregar(datos).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.servicio.cerrar();
+        this.toast.exito(
+          `${tipo === 'ingreso' ? 'Ingreso' : 'Gasto'} registrado: ${datos.descripcion} · ${montoTexto}`,
+        );
+      },
+      error: (e) => {
+        this.guardando.set(false);
+        this.error.set(mensajeDeError(e));
+      },
+    });
   }
 
   protected cerrar(): void {
@@ -182,7 +240,13 @@ export class RegistroRapido {
     this.categoriasService.cargar();
     this.movimientosService.cargar();
     this.tipo.set('gasto');
-    this.formulario.reset({ monto: null, descripcion: '', categoriaId: null, fecha: this.hoy });
+    this.formulario.reset({
+      moneda: 'PEN',
+      monto: null,
+      descripcion: '',
+      categoriaId: null,
+      fecha: this.hoy,
+    });
     this.enviado.set(false);
     this.error.set(null);
   }

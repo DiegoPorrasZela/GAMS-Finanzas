@@ -1,13 +1,21 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { CATEGORIA_SALDO_INICIAL, clasificar, esSaldoInicial } from '../../models/finanzas.models';
+import { GraficoMeses, ResumenMes } from '../../components/grafico-meses/grafico-meses';
+import { Icono } from '../../components/icono/icono';
+import { IconoCategoria } from '../../components/icono-categoria/icono-categoria';
+import {
+  CATEGORIA_SALDO_INICIAL,
+  Movimiento,
+  clasificar,
+  esSaldoInicial,
+} from '../../models/finanzas.models';
 import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
-import { soles } from '../../utils/formato';
+import { ddmmaaaa, soles } from '../../utils/formato';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { PresupuestosService } from '../../services/presupuestos.service';
@@ -19,7 +27,9 @@ import {
   diasRestantesDelMes,
   hoy,
   mesActual,
+  mesCorto,
   mesesConDatos,
+  mesesHastaIncluido,
   nombreMes,
 } from '../../utils/fechas';
 
@@ -31,20 +41,8 @@ function leer(clave: string): boolean {
   }
 }
 
-// Colores de las barras del gráfico por categoría
-const COLORES = [
-  'bg-green-500',
-  'bg-sky-500',
-  'bg-amber-500',
-  'bg-violet-500',
-  'bg-rose-500',
-  'bg-teal-500',
-  'bg-orange-500',
-  'bg-indigo-500',
-];
-
 @Component({
-  imports: [RouterLink, ReactiveFormsModule, DatePipe, DecimalPipe],
+  imports: [RouterLink, ReactiveFormsModule, DecimalPipe, Icono, IconoCategoria, GraficoMeses],
   selector: 'app-inicio',
   styleUrl: './inicio.css',
   templateUrl: './inicio.html',
@@ -62,9 +60,18 @@ export class Inicio {
 
   protected readonly nombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
   protected readonly cargando = this.movimientosService.cargando;
+  // Esqueletos solo en la primera carga (al volver a Inicio, los datos anteriores se quedan en pantalla)
+  protected readonly cargandoPrimeraVez = computed(
+    () => this.cargando() && this.movimientosService.movimientos().length === 0,
+  );
+  protected readonly cargandoMetas = computed(
+    () => this.metasService.cargando() && this.metasService.metas().length === 0,
+  );
   protected readonly error = computed(
     () =>
-      this.movimientosService.error() ?? this.presupuestosService.error() ?? this.metasService.error(),
+      this.movimientosService.error() ??
+      this.presupuestosService.error() ??
+      this.metasService.error(),
   );
 
   // ---- Mes elegido ----
@@ -91,8 +98,7 @@ export class Inicio {
   );
   protected readonly enAhorros = computed(() => this.totalesTodos().ahorro - this.enMetas());
   protected readonly sinMovimientos = computed(
-    () =>
-      !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
+    () => !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
   );
 
   // ---- Saldo inicial: el dinero con el que empieza (se registra una sola vez) ----
@@ -113,33 +119,63 @@ export class Inicio {
   protected readonly totalesMes = computed(() => calcularTotales(this.movimientosDelMes()));
   protected readonly ultimos = computed(() => this.movimientosDelMes().slice(0, 5));
   protected readonly clasificar = clasificar;
+  protected readonly ddmmaaaa = ddmmaaaa;
 
-  // ---- Gastos por categoría (gráfico de barras) ----
+  // ---- Gastos por categoría (barras ordenadas de mayor a menor) ----
+  // Las barras van en un solo color; cada categoría se reconoce por su ícono (el color sigue a la
+  // categoría, nunca a su puesto en el ranking).
   protected readonly gastosPorCategoria = computed(() => {
-    const totales = new Map<string, number>();
+    const totales = new Map<number, { categoria: string; monto: number }>();
     // Solo gastos de consumo: lo separado a ahorros no es un gasto
     for (const m of this.movimientosDelMes().filter((m) => clasificar(m) === 'gasto')) {
-      totales.set(m.categoria, (totales.get(m.categoria) ?? 0) + m.monto);
+      const actual = totales.get(m.categoriaId) ?? { categoria: m.categoria, monto: 0 };
+      totales.set(m.categoriaId, { ...actual, monto: actual.monto + m.monto });
     }
-    const totalGastos = [...totales.values()].reduce((suma, monto) => suma + monto, 0);
-    const mayor = Math.max(0, ...totales.values());
+    const totalGastos = [...totales.values()].reduce((suma, t) => suma + t.monto, 0);
+    const mayor = Math.max(0, ...[...totales.values()].map((t) => t.monto));
     return [...totales]
-      .sort((a, b) => b[1] - a[1])
-      .map(([categoria, monto], i) => ({
+      .sort((a, b) => b[1].monto - a[1].monto)
+      .map(([categoriaId, { categoria, monto }]) => ({
         categoria,
         monto,
         porcentaje: Math.round((monto * 100) / totalGastos),
         ancho: (monto * 100) / mayor,
-        color: COLORES[i % COLORES.length],
+        ...this.categoriasService.apariencia(categoriaId),
       }));
   });
+
+  // ---- Ingresos y gastos de los últimos 6 meses (hasta el mes elegido) ----
+  protected readonly ultimosSeisMeses = computed<ResumenMes[]>(() => {
+    const porMes = new Map<string, Movimiento[]>();
+    for (const m of this.movimientosService.movimientos()) {
+      const clave = m.fecha.slice(0, 7);
+      const delMes = porMes.get(clave);
+      if (delMes) delMes.push(m);
+      else porMes.set(clave, [m]);
+    }
+    return mesesHastaIncluido(this.mes(), 6).map((clave) => {
+      const { ingresos, gastos, ahorro } = calcularTotales(porMes.get(clave) ?? []);
+      return {
+        clave,
+        etiqueta: mesCorto(clave, this.mes()),
+        nombre: capitalizar(nombreMes(clave)),
+        ingresos,
+        gastos,
+        ahorro,
+      };
+    });
+  });
+
+  // Ícono y color de la categoría de un movimiento
+  protected apariencia(movimiento: Movimiento) {
+    return this.categoriasService.apariencia(movimiento.categoriaId);
+  }
 
   // ---- Presupuesto del mes ----
   protected readonly presupuesto = computed(
     () =>
-      this.presupuestosService
-        .presupuestos()
-        .find((p) => claveMes(p.anio, p.mes) === this.mes()) ?? null,
+      this.presupuestosService.presupuestos().find((p) => claveMes(p.anio, p.mes) === this.mes()) ??
+      null,
   );
 
   protected readonly avance = computed(() => {
@@ -205,7 +241,12 @@ export class Inicio {
     this.guardandoSaldoInicial.set(true);
     this.errorSaldoInicial.set(null);
     this.movimientosService
-      .agregar({ descripcion: CATEGORIA_SALDO_INICIAL, monto, fecha: hoy(), categoriaId: categoria.id })
+      .agregar({
+        descripcion: CATEGORIA_SALDO_INICIAL,
+        monto,
+        fecha: hoy(),
+        categoriaId: categoria.id,
+      })
       .subscribe({
         next: () => {
           this.guardandoSaldoInicial.set(false);

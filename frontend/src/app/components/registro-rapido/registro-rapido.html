@@ -25,7 +25,15 @@
         aria-label="Cerrar"
         class="-mr-1 rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
       >
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <svg
+          class="size-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
@@ -46,7 +54,10 @@
         [class.text-red-600!]="tipo() === 'gasto'"
         [class.shadow-sm]="tipo() === 'gasto'"
       >
-        ▼ Gasto
+        <span class="inline-flex items-center gap-1.5">
+          <app-icono nombre="flecha-abajo" class="size-4" />
+          Gasto
+        </span>
       </button>
       <button
         type="button"
@@ -57,15 +68,27 @@
         [class.text-green-600!]="tipo() === 'ingreso'"
         [class.shadow-sm]="tipo() === 'ingreso'"
       >
-        ▲ Ingreso
+        <span class="inline-flex items-center gap-1.5">
+          <app-icono nombre="flecha-arriba" class="size-4" />
+          Ingreso
+        </span>
       </button>
     </div>
 
-    <!-- Monto: lo más importante, grande y con el foco al abrir -->
+    <!-- Monto: lo más importante, grande y con el foco al abrir (en soles, dólares o euros) -->
     <div>
-      <label for="rapido-monto" class="sr-only">Monto</label>
-      <div class="relative">
-        <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-2xl font-semibold text-gray-500">S/</span>
+      <div class="flex">
+        <label for="rapido-moneda" class="sr-only">Moneda</label>
+        <select
+          id="rapido-moneda"
+          formControlName="moneda"
+          class="rounded-l-xl border border-r-0 border-gray-300 bg-gray-50 px-2 text-lg font-semibold text-gray-600 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        >
+          <option value="PEN">S/</option>
+          <option value="USD">US$</option>
+          <option value="EUR">€</option>
+        </select>
+        <label for="rapido-monto" class="sr-only">Monto</label>
         <input
           id="rapido-monto"
           type="number"
@@ -75,18 +98,39 @@
           autofocus
           formControlName="monto"
           placeholder="0.00"
-          class="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-14 text-3xl font-bold text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+          class="w-full min-w-0 rounded-r-xl border border-gray-300 px-4 py-3 text-3xl font-bold text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
           [class.border-red-500!]="tieneError('monto')"
         />
       </div>
       @if (tieneError('monto')) {
         <p class="mt-1 text-xs text-red-600">Ingresa un monto mayor a 0.</p>
       }
+      @if (moneda() !== 'PEN') {
+        @let c = conversion();
+        <p class="mt-1.5 text-xs text-gray-600" aria-live="polite">
+          @if (c.estado === 'lista') {
+            @if (montoEnSoles() !== null) {
+              Se registrará como
+              <strong class="text-gray-900">S/ {{ montoEnSoles() | number: '1.2-2' }}</strong> ·
+            }
+            1 {{ SIMBOLO_MONEDA[moneda()] }} = S/ {{ c.tasa | number: '1.4-4' }}
+            <span class="text-gray-500">(tasa del {{ ddmmaaaa(c.fecha) }})</span>
+          } @else if (c.estado === 'error') {
+            <span class="text-red-600"
+              >No se pudo consultar el tipo de cambio. Revisa tu conexión.</span
+            >
+          } @else {
+            Consultando el tipo de cambio…
+          }
+        </p>
+      }
     </div>
 
     <!-- Descripción (con lo que ya registró antes) -->
     <div>
-      <label for="rapido-descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+      <label for="rapido-descripcion" class="block text-sm font-medium text-gray-700"
+        >Descripción</label
+      >
       <input
         id="rapido-descripcion"
         type="text"
@@ -113,7 +157,9 @@
     <!-- Categoría y fecha -->
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label for="rapido-categoria" class="block text-sm font-medium text-gray-700">Categoría</label>
+        <label for="rapido-categoria" class="block text-sm font-medium text-gray-700"
+          >Categoría</label
+        >
         <select
           id="rapido-categoria"
           formControlName="categoriaId"
@@ -152,7 +198,11 @@
 
     <p class="text-center text-xs text-gray-500">
       ¿Se repite cada mes o cada quincena?
-      <a routerLink="/movimientos" (click)="cerrar()" class="font-medium text-green-700 underline underline-offset-2">
+      <a
+        routerLink="/movimientos"
+        (click)="cerrar()"
+        class="font-medium text-green-700 underline underline-offset-2"
+      >
         Más opciones en Movimientos
       </a>
     </p>

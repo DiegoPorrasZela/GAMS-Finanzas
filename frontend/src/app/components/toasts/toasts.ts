@@ -13,4 +13,8 @@ export class Toasts {
   protected cerrar(id: number): void {
     this.servicio.cerrar(id);
   }
+
+  protected elegirAccion(id: number): void {
+    this.servicio.elegirAccion(id);
+  }
 }

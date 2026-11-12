@@ -10,7 +10,9 @@
       class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
     >
       @for (opcion of opcionesMes(); track opcion.clave) {
-        <option [value]="opcion.clave" [selected]="opcion.clave === mes()">{{ opcion.texto }}</option>
+        <option [value]="opcion.clave" [selected]="opcion.clave === mes()">
+          {{ opcion.texto }}
+        </option>
       }
     </select>
     <button
@@ -33,7 +35,7 @@
 @if (mostrarSaldoInicial()) {
   <section class="mt-6 rounded-xl border border-green-200 bg-green-50 p-6">
     <h2 class="text-lg font-semibold text-green-900">
-      {{ sinMovimientos() ? '¡Bienvenido a GAMS Finanzas! 👋' : '¿Con cuánto dinero empezaste?' }}
+      {{ sinMovimientos() ? '¡Bienvenido a GAMS Finanzas!' : '¿Con cuánto dinero empezaste?' }}
     </h2>
     <p class="mt-1 text-sm text-green-800">
       Registra tu <strong>saldo inicial</strong>: el dinero que tienes hoy, en efectivo y en tu
@@ -48,7 +50,9 @@
     >
       <label for="saldo-inicial" class="sr-only">Saldo inicial</label>
       <div class="relative sm:w-56">
-        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+          >S/</span
+        >
         <input
           id="saldo-inicial"
           type="number"
@@ -99,46 +103,74 @@
       Registra arriba el dinero con el que empezaste.
     } @else {
       ¿Te falta registrar algún ingreso?
-      <a routerLink="/movimientos" class="font-semibold underline underline-offset-2">Ir a Movimientos</a>
+      <a routerLink="/movimientos" class="font-semibold underline underline-offset-2"
+        >Ir a Movimientos</a
+      >
     }
   </p>
 }
 
 <!-- Tarjetas de resumen -->
-<section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<section
+  class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+  [attr.aria-busy]="cargandoPrimeraVez()"
+>
   <article class="rounded-xl bg-gray-900 p-6 text-white shadow-md">
     <p class="text-sm text-gray-400">Disponible para gastar</p>
-    <p class="mt-2 text-3xl font-bold" [class.text-red-400]="saldoTotal() < 0">
-      S/ {{ saldoTotal() | number: '1.2-2' }}
-    </p>
-    <p class="mt-2 text-xs text-gray-400">
-      🐷 En ahorros S/ {{ enAhorros() | number: '1.2-2' }} · En metas S/
-      {{ enMetas() | number: '1.2-2' }}
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-3 h-8 w-36 bg-gray-700!"></p>
+      <p class="sr-only">Cargando tu resumen…</p>
+    } @else {
+      <p class="mt-2 text-3xl font-bold" [class.text-red-400]="saldoTotal() < 0">
+        S/ {{ saldoTotal() | number: '1.2-2' }}
+      </p>
+    }
+    <p class="mt-2 flex items-start gap-1.5 text-xs text-gray-400">
+      <app-icono nombre="alcancia" class="mt-px size-3.5" />
+      <span>
+        <span class="whitespace-nowrap">En ahorros S/ {{ enAhorros() | number: '1.2-2' }}</span> ·
+        <span class="whitespace-nowrap">En metas S/ {{ enMetas() | number: '1.2-2' }}</span>
+      </span>
     </p>
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
     <p class="text-sm text-gray-500">Ingresos del mes</p>
-    <p class="mt-2 text-3xl font-bold text-green-600">
-      S/ {{ totalesMes().ingresos | number: '1.2-2' }}
-    </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-3 h-8 w-32"></p>
+    } @else {
+      <p class="mt-2 text-3xl font-bold text-green-600">
+        S/ {{ totalesMes().ingresos | number: '1.2-2' }}
+      </p>
+    }
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
     <p class="text-sm text-gray-500">Gastos del mes</p>
-    <p class="mt-2 text-3xl font-bold text-red-600">
-      S/ {{ totalesMes().gastos | number: '1.2-2' }}
-    </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-3 h-8 w-28"></p>
+    } @else {
+      <p class="mt-2 text-3xl font-bold text-red-600">
+        S/ {{ totalesMes().gastos | number: '1.2-2' }}
+      </p>
+    }
   </article>
 
   <a
     routerLink="/metas"
     class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-sky-400"
   >
-    <p class="text-sm text-gray-500">🐷 Ahorrado del mes</p>
-    <p class="mt-2 text-3xl font-bold text-sky-700">
-      S/ {{ totalesMes().ahorro | number: '1.2-2' }}
+    <p class="flex items-center gap-1.5 text-sm text-gray-500">
+      <app-icono nombre="alcancia" class="size-4 text-sky-600" />
+      Ahorrado del mes
     </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-3 h-8 w-24"></p>
+    } @else {
+      <p class="mt-2 text-3xl font-bold text-sky-700">
+        S/ {{ totalesMes().ahorro | number: '1.2-2' }}
+      </p>
+    }
   </a>
 </section>
 
@@ -149,7 +181,9 @@
       <div class="flex items-start justify-between gap-4">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Mi presupuesto</h2>
-          <p class="text-sm text-gray-500">Cuánto puedes gastar y cuánto quieres ahorrar este mes.</p>
+          <p class="text-sm text-gray-500">
+            Cuánto puedes gastar y cuánto quieres ahorrar este mes.
+          </p>
         </div>
         @if (presupuesto() && !editandoPresupuesto()) {
           <div class="flex shrink-0 gap-3 text-sm">
@@ -190,7 +224,10 @@
               >Gasto máximo del mes</label
             >
             <div class="relative mt-1">
-              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+              <span
+                class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+                >S/</span
+              >
               <input
                 id="limite"
                 type="number"
@@ -212,7 +249,10 @@
               >Meta de ahorro del mes</label
             >
             <div class="relative mt-1">
-              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">S/</span>
+              <span
+                class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
+                >S/</span
+              >
               <input
                 id="ahorro"
                 type="number"
@@ -239,7 +279,8 @@
               <p>
                 Con tus ingresos registrados este mes (S/ {{ c.ingresos | number: '1.2-2' }}) y una
                 meta de ahorro de S/ {{ c.ahorro | number: '1.2-2' }}, puedes gastar hasta
-                <strong>S/ {{ c.sugerido | number: '1.2-2' }}</strong>.
+                <strong>S/ {{ c.sugerido | number: '1.2-2' }}</strong
+                >.
                 <button
                   type="button"
                   (click)="usarSugerido()"
@@ -272,8 +313,8 @@
         <div class="mt-5">
           <div class="flex items-baseline justify-between text-sm">
             <p class="text-gray-700">
-              Gastaste <strong class="text-gray-900">S/ {{ a.gastos | number: '1.2-2' }}</strong>
-              de S/ {{ presupuesto()!.limiteGasto | number: '1.2-2' }}
+              Gastaste <strong class="text-gray-900">S/ {{ a.gastos | number: '1.2-2' }}</strong> de
+              S/ {{ presupuesto()!.limiteGasto | number: '1.2-2' }}
             </p>
             <span class="font-semibold text-gray-900">{{ a.porcentaje }} %</span>
           </div>
@@ -297,7 +338,8 @@
             "
           >
             @if (a.estado === 'excedido') {
-              Superaste tu presupuesto por <strong>S/ {{ -a.restante | number: '1.2-2' }}</strong>.
+              Superaste tu presupuesto por <strong>S/ {{ -a.restante | number: '1.2-2' }}</strong
+              >.
             } @else {
               @if (a.estado === 'cuidado') {
                 Cuidado: ya usaste el {{ a.porcentaje }} % de tu presupuesto.
@@ -306,8 +348,9 @@
               }
               Te quedan <strong>S/ {{ a.restante | number: '1.2-2' }}</strong>
               @if (a.porDia) {
-                : puedes gastar unos <strong>S/ {{ a.porDia | number: '1.2-2' }} por día</strong>
-                durante los {{ a.dias }} días que quedan.
+                : puedes gastar unos
+                <strong>S/ {{ a.porDia | number: '1.2-2' }} por día</strong> durante los
+                {{ a.dias }} días que quedan.
               } @else {
                 .
               }
@@ -334,7 +377,8 @@
             </div>
             <p class="mt-2 text-sm text-gray-500">
               @if (a.porcentajeAhorro >= 100) {
-                🎉 ¡Cumpliste tu meta de ahorro de este mes!
+                <app-icono nombre="trofeo" class="mr-0.5 size-4 align-[-3px] text-amber-500" />
+                ¡Cumpliste tu meta de ahorro de este mes!
               } @else if (a.ahorro < 0) {
                 Este mes retiraste de tus ahorros más de lo que separaste.
               } @else {
@@ -372,25 +416,53 @@
       <p class="text-sm text-gray-500">Gastos de {{ nombreDelMes() }} por categoría.</p>
 
       <ul class="mt-5 space-y-4">
-        @for (item of gastosPorCategoria(); track item.categoria) {
-          <li>
-            <div class="flex items-baseline justify-between text-sm">
-              <span class="font-medium text-gray-900">{{ item.categoria }}</span>
-              <span class="text-gray-500">
-                S/ {{ item.monto | number: '1.2-2' }} ·
-                <span class="font-semibold text-gray-900">{{ item.porcentaje }} %</span>
+        @if (cargandoPrimeraVez()) {
+          @for (fila of [1, 2, 3]; track fila) {
+            <li class="flex items-center gap-3" aria-hidden="true">
+              <span class="esqueleto size-7 shrink-0 rounded-full"></span>
+              <span class="flex-1 space-y-2">
+                <span class="esqueleto block h-3.5 w-1/3"></span>
+                <span class="esqueleto block h-2.5 w-full rounded-full"></span>
               </span>
-            </div>
-            <div class="mt-1.5 h-2.5 overflow-hidden rounded-full bg-gray-100">
-              <div class="h-full rounded-full" [class]="item.color" [style.width.%]="item.ancho"></div>
-            </div>
-          </li>
-        } @empty {
-          <li class="py-6 text-center text-sm text-gray-500">
-            No registraste gastos en {{ nombreDelMes() }}.
-          </li>
+            </li>
+          }
+        } @else {
+          @for (item of gastosPorCategoria(); track item.categoria) {
+            <li class="flex items-center gap-3">
+              <app-icono-categoria [icono]="item.icono" [color]="item.color" tamano="chico" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-baseline justify-between gap-2 text-sm">
+                  <span class="truncate font-medium text-gray-900">{{ item.categoria }}</span>
+                  <span class="shrink-0 text-gray-500">
+                    S/ {{ item.monto | number: '1.2-2' }} ·
+                    <span class="font-semibold text-gray-900">{{ item.porcentaje }} %</span>
+                  </span>
+                </div>
+                <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div class="h-full rounded-full bg-red-600" [style.width.%]="item.ancho"></div>
+                </div>
+              </div>
+            </li>
+          } @empty {
+            <li class="py-6 text-center text-sm text-gray-500">
+              No registraste gastos en {{ nombreDelMes() }}.
+            </li>
+          }
         }
       </ul>
+    </section>
+
+    <!-- Evolución: ingresos contra gastos de los últimos 6 meses -->
+    <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold text-gray-900">Tus últimos 6 meses</h2>
+      <p class="text-sm text-gray-500">
+        Ingresos y gastos de cada mes, en soles, hasta {{ nombreDelMes() }}.
+      </p>
+      @if (cargandoPrimeraVez()) {
+        <div class="esqueleto mt-4 h-56" aria-hidden="true"></div>
+      } @else {
+        <app-grafico-meses [meses]="ultimosSeisMeses()" [seleccionado]="mes()" />
+      }
     </section>
   </div>
 
@@ -404,6 +476,14 @@
         </a>
       </div>
       <ul class="divide-y divide-gray-100">
+        @if (cargandoMetas()) {
+          @for (fila of [1, 2]; track fila) {
+            <li class="space-y-2 px-6 py-4" aria-hidden="true">
+              <span class="esqueleto block h-4 w-1/2"></span>
+              <span class="esqueleto block h-2 w-full rounded-full"></span>
+            </li>
+          }
+        }
         @for (meta of metas(); track meta.id) {
           <li class="px-6 py-4">
             <div class="flex items-baseline justify-between gap-2 text-sm">
@@ -422,7 +502,7 @@
             </p>
           </li>
         } @empty {
-          <li class="px-6 py-8 text-center text-sm text-gray-500">
+          <li class="px-6 py-8 text-center text-sm text-gray-500" [class.hidden]="cargandoMetas()">
             Aún no tienes metas.
             <a routerLink="/metas" class="font-medium text-green-600 hover:text-green-700">
               Crea la primera
@@ -436,42 +516,61 @@
     <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
         <h2 class="text-lg font-semibold text-gray-900">Últimos movimientos</h2>
-        <a routerLink="/movimientos" class="text-sm font-medium text-green-600 hover:text-green-700">
+        <a
+          routerLink="/movimientos"
+          class="text-sm font-medium text-green-600 hover:text-green-700"
+        >
           Ver todos →
         </a>
       </div>
 
       <ul class="divide-y divide-gray-100">
-        @for (movimiento of ultimos(); track movimiento.id) {
-          <li class="flex items-center justify-between gap-3 px-6 py-3">
-            <div class="min-w-0">
-              <p class="truncate font-medium text-gray-900">{{ movimiento.descripcion }}</p>
-              <p class="text-xs text-gray-500">
-                {{ movimiento.categoria }} · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
+        @if (cargandoPrimeraVez()) {
+          @for (fila of [1, 2, 3, 4]; track fila) {
+            <li class="flex items-center gap-3 px-6 py-3" aria-hidden="true">
+              <span class="esqueleto size-7 shrink-0 rounded-full"></span>
+              <span class="flex-1 space-y-2">
+                <span class="esqueleto block h-3.5 w-2/3"></span>
+                <span class="esqueleto block h-3 w-1/3"></span>
+              </span>
+              <span class="esqueleto h-3.5 w-16"></span>
+            </li>
+          }
+        } @else {
+          @for (movimiento of ultimos(); track movimiento.id) {
+            @let deAhorros =
+              clasificar(movimiento) === 'ahorro' || clasificar(movimiento) === 'retiro';
+            @let estilo = apariencia(movimiento);
+            <li class="flex items-center gap-3 px-6 py-3">
+              <app-icono-categoria [icono]="estilo.icono" [color]="estilo.color" tamano="chico" />
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-gray-900">{{ movimiento.descripcion }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ movimiento.categoria }} · {{ ddmmaaaa(movimiento.fecha) }}
+                </p>
+              </div>
+              <p
+                class="shrink-0 text-sm font-semibold"
+                [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
+                [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
+                [class.text-sky-700]="deAhorros"
+              >
+                {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
+                {{ movimiento.monto | number: '1.2-2' }}
               </p>
-            </div>
-            @let deAhorros = clasificar(movimiento) === 'ahorro' || clasificar(movimiento) === 'retiro';
-            <p
-              class="shrink-0 text-sm font-semibold"
-              [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
-              [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
-              [class.text-sky-700]="deAhorros"
-            >
-              {{ deAhorros ? '🐷' : '' }} {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
-              {{ movimiento.monto | number: '1.2-2' }}
-            </p>
-          </li>
-        } @empty {
-          <li class="px-6 py-8 text-center text-sm text-gray-500">
-            @if (cargando()) {
-              Cargando movimientos…
-            } @else {
+            </li>
+          } @empty {
+            <li class="px-6 py-8 text-center text-sm text-gray-500">
               Sin movimientos en {{ nombreDelMes() }}.
-              <a routerLink="/movimientos" class="font-medium text-green-600 hover:text-green-700">
+              <button
+                type="button"
+                (click)="registrar()"
+                class="font-medium text-green-600 hover:text-green-700"
+              >
                 Registra uno
-              </a>
-            }
-          </li>
+              </button>
+            </li>
+          }
         }
       </ul>
     </section>

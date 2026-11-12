@@ -1,37 +1,49 @@
 <header class="sticky top-0 z-10 bg-gray-900 shadow-md">
   <nav
-    class="max-w-6xl mx-auto flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
+    class="max-w-6xl mx-auto flex flex-col gap-3 px-4 py-3 whitespace-nowrap lg:flex-row lg:items-center lg:justify-between lg:gap-4"
   >
-    <a routerLink="/" class="flex items-center gap-2.5 text-xl font-bold tracking-tight text-white">
+    <a
+      routerLink="/"
+      class="flex shrink-0 items-center gap-2.5 text-xl font-bold tracking-tight text-white"
+    >
       <app-logo class="size-8" />
       <span><span class="text-green-500">GAMS</span> Finanzas</span>
     </a>
 
     <!-- Con sesión, en celular y tablet estos enlaces van en la barra inferior (app-navegacion-movil) -->
-    <div class="flex-wrap gap-2 lg:flex" [class.hidden]="usuario()" [class.flex]="!usuario()">
+    <div
+      class="flex-wrap gap-2 lg:flex lg:flex-nowrap lg:gap-1"
+      [class.hidden]="usuario()"
+      [class.flex]="!usuario()"
+    >
       @for (enlace of enlaces(); track enlace.ruta) {
         <a
           [routerLink]="enlace.ruta"
           routerLinkActive="bg-green-600! text-white!"
           [routerLinkActiveOptions]="{ exact: enlace.exacto }"
           ariaCurrentWhenActive="page"
-          class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors lg:px-2.5"
           >{{ enlace.texto }}</a
         >
       }
     </div>
 
-    <!-- Sesión -->
-    <div class="items-center gap-3 text-sm lg:flex" [class.hidden]="usuario()" [class.flex]="!usuario()">
+    <!-- Sesión (sin que los textos se partan en dos líneas: lo menos importante se oculta si falta espacio) -->
+    <div
+      class="shrink-0 items-center gap-3 text-sm lg:flex"
+      [class.hidden]="usuario()"
+      [class.flex]="!usuario()"
+    >
       @if (usuario(); as usuario) {
         @if (sePuedeInstalar()) {
           <button
             type="button"
             (click)="instalar()"
+            aria-label="Instalar GAMS Finanzas como app"
             title="Instalar GAMS Finanzas como app"
-            class="rounded-md px-2 py-1.5 font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+            class="rounded-md p-2 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
           >
-            📲 Instalar app
+            <app-icono nombre="instalar" class="size-5" />
           </button>
         }
         <button
@@ -42,7 +54,9 @@
           + Registrar
         </button>
         <span class="text-gray-300">
-          {{ usuario.nombre }}
+          <span class="hidden max-w-40 truncate align-bottom 2xl:inline-block">{{
+            usuario.nombre
+          }}</span>
           @if (esAdmin()) {
             <span class="ml-1 rounded bg-green-600 px-1.5 py-0.5 text-xs font-semibold text-white"
               >ADMIN</span
@@ -52,9 +66,12 @@
         <button
           type="button"
           (click)="cerrarSesion()"
-          class="rounded-md border border-gray-700 px-3 py-1.5 font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+          [attr.aria-label]="'Cerrar la sesión de ' + usuario.nombre"
+          [title]="'Cerrar la sesión de ' + usuario.nombre"
+          class="inline-flex items-center gap-1.5 rounded-md border border-gray-700 px-3 py-1.5 font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
         >
-          Cerrar sesión
+          <app-icono nombre="salir" class="size-4 xl:hidden" />
+          <span class="hidden xl:inline">Cerrar sesión</span>
         </button>
       } @else {
         <a routerLink="/login" class="font-medium text-gray-300 hover:text-white">Iniciar sesión</a>

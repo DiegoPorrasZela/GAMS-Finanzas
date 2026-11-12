@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { ToastService } from '../../services/toast.service';
 import { DialogoService } from '../../services/dialogo.service';
+import { MovimientosService } from '../../services/movimientos.service';
 import { Movimientos } from './movimientos';
 
 const api = environment.apiUrl;
@@ -26,7 +27,7 @@ describe('Movimientos', () => {
   let http: HttpTestingController;
   let pagina: HTMLElement;
 
-  const filas = () => pagina.querySelectorAll('ul[aria-label="Lista de movimientos"] > li');
+  const filas = () => pagina.querySelectorAll('[aria-label="Lista de movimientos"] li');
   const escribir = (id: string, valor: string) => {
     const input = pagina.querySelector<HTMLInputElement>(`#${id}`)!;
     input.value = valor;
@@ -36,7 +37,9 @@ describe('Movimientos', () => {
   const notificaciones = () => TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' | ');
   const enviarFormulario = () => pagina.querySelector('form')!.dispatchEvent(new Event('submit'));
   const elegirIngreso = () =>
-    [...pagina.querySelectorAll('button')].find((b) => b.textContent?.includes('▲ Ingreso'))!.click();
+    [...pagina.querySelectorAll<HTMLButtonElement>('[aria-label="Tipo"] button')]
+      .find((b) => b.textContent?.includes('Ingreso'))!
+      .click();
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -208,17 +211,76 @@ describe('Movimientos', () => {
     expect(pagina.textContent).toContain('Nuevo movimiento');
   });
 
-  it('should delete a movement after confirming', async () => {
-    const confirmar = vi.spyOn(TestBed.inject(DialogoService), 'confirmar').mockResolvedValue(true);
+  it('should delete right away (without a dialog) and let the user undo it', async () => {
+    const toasts = TestBed.inject(ToastService);
     pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
-    await fixture.whenStable(); // espera la respuesta del diálogo
+    await fixture.whenStable();
 
-    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ tono: 'peligro', confirmar: 'Eliminar' }));
+    expect(filas().length).toBe(2); // desaparece al instante
+    const aviso = toasts.toasts().at(-1)!;
+    expect(aviso.texto).toContain('"Menú del almuerzo" eliminado');
+    expect(aviso.accion?.texto).toBe('Deshacer');
+
+    toasts.elegirAccion(aviso.id); // "Deshacer"
+    await fixture.whenStable();
+    expect(filas().length).toBe(3);
+    TestBed.inject(MovimientosService).confirmarPendientes();
+    // http.verify() (afterEach) comprueba que no se envió ningún DELETE
+  });
+
+  it('should delete on the server when the undo time is over', async () => {
+    pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    TestBed.inject(MovimientosService).confirmarPendientes(); // como si pasaran los 5 segundos
+
     http.expectOne({ method: 'DELETE', url: `${api}/movimientos/2` }).flush(null);
     await fixture.whenStable();
 
     expect(filas().length).toBe(2);
     expect(pagina.textContent).not.toContain('Menú del almuerzo');
+  });
+
+  it('should bring the movement back if the server rejects the deletion', async () => {
+    pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    TestBed.inject(MovimientosService).confirmarPendientes();
+
+    http
+      .expectOne({ method: 'DELETE', url: `${api}/movimientos/2` })
+      .flush({ detail: 'Ese ahorro ya está en una meta' }, { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
+
+    expect(filas().length).toBe(3);
+    expect(notificaciones()).toContain('Ese ahorro ya está en una meta');
+  });
+
+  it('should group the list by day with what changed that day', () => {
+    const dias = [...pagina.querySelectorAll('[aria-label="Lista de movimientos"] h3')].map((h) =>
+      h.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(dias.length).toBe(3);
+    expect(dias[0]).toContain('7 de noviembre');
+    expect(dias[0]).toContain('+ S/ 1,500.00');
+    expect(dias[1]).toContain('− S/ 15.00');
+  });
+
+  it("should register an expense paid in dollars, converted with that day's rate", async () => {
+    escribir('descripcion', 'Suscripción de música');
+    const moneda = pagina.querySelector<HTMLSelectElement>('#moneda')!;
+    moneda.value = 'USD';
+    moneda.dispatchEvent(new Event('change'));
+    escribir('monto', '10');
+    await fixture.whenStable();
+
+    const tasa = http.expectOne((r) => r.url === 'https://api.frankfurter.dev/v2/rates');
+    expect(tasa.request.params.get('base')).toBe('USD');
+    expect(tasa.request.params.get('quotes')).toBe('PEN');
+    tasa.flush([{ date: '2026-11-06', base: 'USD', quote: 'PEN', rate: 3.45 }]);
+    await fixture.whenStable();
+    expect(pagina.textContent).toContain('Se registrará como S/ 34.50');
+
+    enviarFormulario();
+    await fixture.whenStable();
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
+    expect(peticion.request.body).toMatchObject({ monto: 34.5, monedaOriginal: 'USD', montoOriginal: 10 });
   });
 
   it('should show the server message when saving fails', async () => {
@@ -242,5 +304,24 @@ describe('Movimientos', () => {
     await fixture.whenStable();
 
     expect(filas().length).toBe(1);
+  });
+
+  it('should show 30 movements and load the rest with "Ver más"', async () => {
+    const muchos = Array.from({ length: 35 }, (_, i) => ({
+      ...movimientos[1],
+      id: 100 + i,
+      descripcion: 'Pasaje ' + i,
+      fecha: `2026-10-${String((i % 28) + 1).padStart(2, '0')}`,
+    }));
+    TestBed.inject(MovimientosService).cargar();
+    http.expectOne(`${api}/movimientos`).flush(muchos);
+    await fixture.whenStable();
+
+    expect(filas().length).toBe(30);
+    const verMas = [...pagina.querySelectorAll('button')].find((b) => b.textContent?.includes('Ver más'))!;
+    expect(verMas.textContent).toContain('5 movimientos');
+    verMas.click();
+    await fixture.whenStable();
+    expect(filas().length).toBe(35);
   });
 });

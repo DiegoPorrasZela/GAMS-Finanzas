@@ -128,8 +128,12 @@
           [class.text-green-400]="variacionDia() >= 0"
           [class.text-red-400]="variacionDia() < 0"
         >
-          {{ variacionDia() >= 0 ? '▲' : '▼' }} {{ formatearTasa(abs(variacionDia())) }} respecto al
-          día anterior
+          <app-icono
+            [nombre]="variacionDia() >= 0 ? 'flecha-arriba' : 'flecha-abajo'"
+            class="size-4 align-[-3px]"
+          />
+          <span class="sr-only">{{ variacionDia() >= 0 ? 'Subió' : 'Bajó' }}</span>
+          {{ formatearTasa(abs(variacionDia())) }} respecto al día anterior
         </p>
 
         <p class="mt-6 text-xs text-gray-400">
@@ -188,7 +192,11 @@
               [class.text-green-600]="variacionPeriodo() >= 0"
               [class.text-red-600]="variacionPeriodo() < 0"
             >
-              {{ variacionPeriodo() >= 0 ? '▲' : '▼' }}
+              <app-icono
+                [nombre]="variacionPeriodo() >= 0 ? 'flecha-arriba' : 'flecha-abajo'"
+                class="size-4 align-[-3px]"
+              />
+              <span class="sr-only">{{ variacionPeriodo() >= 0 ? 'Subió' : 'Bajó' }}</span>
               {{ formatearPorcentaje(variacionPeriodo()) }}
             </dd>
           </div>

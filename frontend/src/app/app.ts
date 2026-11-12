@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Dialogo } from './components/dialogo/dialogo';
+import { Icono } from './components/icono/icono';
 import { Logo } from './components/logo/logo';
 import { NavegacionMovil } from './components/navegacion-movil/navegacion-movil';
 import { RegistroRapido } from './components/registro-rapido/registro-rapido';
@@ -21,6 +22,7 @@ interface Enlace {
     RouterLink,
     RouterLinkActive,
     Dialogo,
+    Icono,
     Logo,
     NavegacionMovil,
     RegistroRapido,
@@ -50,7 +52,9 @@ export class App {
       { ruta: '/tipo-cambio', texto: 'Tipo de cambio', exacto: false },
       { ruta: '/acerca', texto: 'Acerca', exacto: false },
     ];
-    const admin: Enlace[] = this.esAdmin() ? [{ ruta: '/admin', texto: 'Admin', exacto: false }] : [];
+    const admin: Enlace[] = this.esAdmin()
+      ? [{ ruta: '/admin', texto: 'Admin', exacto: false }]
+      : [];
     return [...privados, ...publicos, ...admin];
   });
 

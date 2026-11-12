@@ -10,31 +10,57 @@
 }
 
 <!-- Resumen (respeta los filtros) -->
-<section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+<section
+  class="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+  [attr.aria-busy]="cargandoPrimeraVez()"
+>
+  <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
     <p class="text-sm text-gray-500">Ingresos</p>
-    <p class="mt-1 text-2xl font-bold text-green-600">
-      S/ {{ totales().ingresos | number: '1.2-2' }}
-    </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-2 h-7 w-32"></p>
+    } @else {
+      <p class="mt-1 text-xl font-bold sm:text-2xl text-green-600">
+        S/ {{ totales().ingresos | number: '1.2-2' }}
+      </p>
+    }
   </article>
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+  <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
     <p class="text-sm text-gray-500">Gastos</p>
-    <p class="mt-1 text-2xl font-bold text-red-600">S/ {{ totales().gastos | number: '1.2-2' }}</p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-2 h-7 w-28"></p>
+    } @else {
+      <p class="mt-1 text-xl font-bold sm:text-2xl text-red-600">
+        S/ {{ totales().gastos | number: '1.2-2' }}
+      </p>
+    }
   </article>
-  <article class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-    <p class="text-sm text-gray-500">🐷 Ahorrado</p>
-    <p class="mt-1 text-2xl font-bold text-sky-700">S/ {{ totales().ahorro | number: '1.2-2' }}</p>
+  <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+    <p class="flex items-center gap-1.5 text-sm text-gray-500">
+      <app-icono nombre="alcancia" class="size-4 text-sky-600" />
+      Ahorrado
+    </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-2 h-7 w-24"></p>
+    } @else {
+      <p class="mt-1 text-xl font-bold sm:text-2xl text-sky-700">
+        S/ {{ totales().ahorro | number: '1.2-2' }}
+      </p>
+    }
   </article>
-  <article class="rounded-xl bg-gray-900 p-5 text-white shadow-md">
+  <article class="rounded-xl bg-gray-900 p-4 text-white shadow-md sm:p-5">
     <p
       class="text-sm text-gray-400"
       title="Todo lo que entró a tu saldo menos todo lo que salió (incluye ahorros y saldo inicial)"
     >
       Resultado del periodo
     </p>
-    <p class="mt-1 text-2xl font-bold" [class.text-red-400]="totales().saldo < 0">
-      S/ {{ totales().saldo | number: '1.2-2' }}
-    </p>
+    @if (cargandoPrimeraVez()) {
+      <p class="esqueleto mt-2 h-7 w-32 bg-gray-700!"></p>
+    } @else {
+      <p class="mt-1 text-xl font-bold sm:text-2xl" [class.text-red-400]="totales().saldo < 0">
+        S/ {{ totales().saldo | number: '1.2-2' }}
+      </p>
+    }
     <p class="mt-1 text-xs text-gray-400">
       {{ totales().saldo < 0 ? 'Salió más dinero del que entró' : 'Lo que entró − lo que salió' }}
     </p>
@@ -42,8 +68,8 @@
 </section>
 
 <div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
-  <!-- Columna derecha (en celular va primero) -->
-  <div class="space-y-6 lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1">
+  <!-- Columna derecha (en celular va después de la lista: para registrar rápido está el botón "+") -->
+  <div class="order-last space-y-6 lg:sticky lg:top-24 lg:order-none lg:col-start-3 lg:row-start-1">
     <!-- Formulario -->
     <section
       class="rounded-xl border bg-white p-6 shadow-sm"
@@ -62,7 +88,11 @@
         }
 
         <!-- Tipo -->
-        <div class="grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1" role="group" aria-label="Tipo">
+        <div
+          class="grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1"
+          role="group"
+          aria-label="Tipo"
+        >
           <button
             type="button"
             (click)="elegirTipo('gasto')"
@@ -72,7 +102,10 @@
             [class.text-red-600!]="tipoNuevo() === 'gasto'"
             [class.shadow-sm]="tipoNuevo() === 'gasto'"
           >
-            ▼ Gasto
+            <span class="inline-flex items-center gap-1.5">
+              <app-icono nombre="flecha-abajo" class="size-4" />
+              Gasto
+            </span>
           </button>
           <button
             type="button"
@@ -83,13 +116,18 @@
             [class.text-green-600!]="tipoNuevo() === 'ingreso'"
             [class.shadow-sm]="tipoNuevo() === 'ingreso'"
           >
-            ▲ Ingreso
+            <span class="inline-flex items-center gap-1.5">
+              <app-icono nombre="flecha-arriba" class="size-4" />
+              Ingreso
+            </span>
           </button>
         </div>
 
         <!-- Descripción -->
         <div>
-          <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+          <label for="descripcion" class="block text-sm font-medium text-gray-700"
+            >Descripción</label
+          >
           <input
             id="descripcion"
             type="text"
@@ -114,15 +152,27 @@
           }
         </div>
 
-        <!-- Monto -->
+        <!-- Monto (en soles, dólares o euros) -->
         <div>
           <label for="monto" class="block text-sm font-medium text-gray-700">Monto</label>
-          <div class="relative mt-1">
-            <span
-              class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500"
-            >
-              S/
-            </span>
+          <div class="mt-1 flex">
+            @if (aceptaOtraMoneda()) {
+              <label for="moneda" class="sr-only">Moneda</label>
+              <select
+                id="moneda"
+                formControlName="moneda"
+                class="rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-2 py-2 text-sm font-medium text-gray-700 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              >
+                <option value="PEN">S/</option>
+                <option value="USD">US$</option>
+                <option value="EUR">€</option>
+              </select>
+            } @else {
+              <span
+                class="flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm font-medium text-gray-700"
+                >S/</span
+              >
+            }
             <input
               id="monto"
               type="number"
@@ -131,12 +181,32 @@
               step="0.01"
               formControlName="monto"
               placeholder="0.00"
-              class="w-full rounded-md border border-gray-300 py-2 pr-3 pl-9 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+              class="w-full min-w-0 rounded-r-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
               [class.border-red-500!]="tieneError('monto')"
             />
           </div>
           @if (tieneError('monto')) {
             <p class="mt-1 text-xs text-red-600">Ingresa un monto mayor a 0.</p>
+          }
+          <!-- Conversión a soles con el tipo de cambio del día del movimiento -->
+          @if (moneda() !== 'PEN') {
+            @let c = conversion();
+            <p class="mt-1.5 text-xs text-gray-600" aria-live="polite">
+              @if (c.estado === 'lista') {
+                @if (montoEnSoles() !== null) {
+                  Se registrará como
+                  <strong class="text-gray-900">S/ {{ montoEnSoles() | number: '1.2-2' }}</strong> ·
+                }
+                1 {{ SIMBOLO_MONEDA[moneda()] }} = S/ {{ c.tasa | number: '1.4-4' }}
+                <span class="text-gray-500">(tasa del {{ ddmmaaaa(c.fecha) }})</span>
+              } @else if (c.estado === 'error') {
+                <span class="text-red-600"
+                  >No se pudo consultar el tipo de cambio. Revisa tu conexión.</span
+                >
+              } @else {
+                Consultando el tipo de cambio…
+              }
+            </p>
           }
         </div>
 
@@ -180,8 +250,12 @@
           </p>
         }
 
-        <!-- Repetir automáticamente (solo al crear, y nunca para el saldo inicial) -->
-        @if (!editando() && !esSaldoInicialElegido()) {
+        <!-- Repetir automáticamente (solo al crear, en soles, y nunca para el saldo inicial) -->
+        @if (!editando() && !esSaldoInicialElegido() && moneda() !== 'PEN') {
+          <p class="rounded-md bg-gray-50 p-3 text-xs text-gray-500">
+            Los movimientos automáticos se registran en soles.
+          </p>
+        } @else if (!editando() && !esSaldoInicialElegido()) {
           <div class="rounded-md bg-gray-50 p-3 text-sm">
             <label class="flex cursor-pointer items-start gap-3">
               <input
@@ -191,7 +265,10 @@
                 class="mt-0.5 size-4 accent-green-600"
               />
               <span>
-                <span class="font-medium text-gray-900">🔁 Repetir automáticamente</span>
+                <span class="inline-flex items-center gap-1.5 font-medium text-gray-900">
+                  <app-icono nombre="repetir" class="size-4 text-gray-500" />
+                  Repetir automáticamente
+                </span>
                 @if (!formulario.controls.repetir.value) {
                   <span class="block text-gray-500">
                     Para el sueldo (mensual o quincenal), el alquiler o un plan que se repite.
@@ -201,9 +278,14 @@
             </label>
 
             @if (formulario.controls.repetir.value) {
-              <div class="mt-3 grid gap-2" [class.grid-cols-2]="formulario.controls.frecuencia.value === 'MENSUAL'">
+              <div
+                class="mt-3 grid gap-2"
+                [class.grid-cols-2]="formulario.controls.frecuencia.value === 'MENSUAL'"
+              >
                 <div>
-                  <label for="frecuencia" class="block text-xs font-medium text-gray-600">¿Cada cuánto?</label>
+                  <label for="frecuencia" class="block text-xs font-medium text-gray-600"
+                    >¿Cada cuánto?</label
+                  >
                   <select
                     id="frecuencia"
                     formControlName="frecuencia"
@@ -217,7 +299,9 @@
                 </div>
                 @if (formulario.controls.frecuencia.value === 'MENSUAL') {
                   <div>
-                    <label for="dia" class="block text-xs font-medium text-gray-600">Día del mes</label>
+                    <label for="dia" class="block text-xs font-medium text-gray-600"
+                      >Día del mes</label
+                    >
                     <select
                       id="dia"
                       formControlName="dia"
@@ -232,7 +316,8 @@
                 }
               </div>
               <p class="mt-2 text-gray-600">
-                Se registrará solo <strong>{{ repeticionElegida() }}</strong>.
+                Se registrará solo <strong>{{ repeticionElegida() }}</strong
+                >.
                 <span class="block text-xs text-gray-500">
                   Primer registro: {{ ddmmaaaa(primerRegistro()) }}
                   @if (primerRegistro() <= hoy) {
@@ -273,7 +358,10 @@
     <!-- Movimientos automáticos -->
     <section class="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div class="border-b border-gray-200 px-6 py-4">
-        <h2 class="text-lg font-semibold text-gray-900">🔁 Automáticos</h2>
+        <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <app-icono nombre="repetir" class="size-5 text-gray-500" />
+          Automáticos
+        </h2>
         <p class="text-sm text-gray-500">Se registran solos cuando llega su fecha.</p>
       </div>
       <ul class="divide-y divide-gray-100">
@@ -329,7 +417,9 @@
     class="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-2 lg:col-start-1 lg:row-start-1"
   >
     <!-- Filtros -->
-    <div class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:flex-wrap sm:items-center">
+    <div
+      class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:flex-wrap sm:items-center"
+    >
       <div
         class="inline-flex self-start rounded-md bg-gray-100 p-1"
         role="group"
@@ -386,133 +476,167 @@
       />
     </div>
 
-    <ul class="divide-y divide-gray-100" aria-label="Lista de movimientos">
-      @for (movimiento of filtrados(); track movimiento.id) {
-        <li
-          class="group flex items-center gap-4 px-4 py-3 sm:px-6"
-          [class.bg-green-50]="editando()?.id === movimiento.id"
-        >
-          <!-- Ícono: ingreso ▲, gasto ▼, ahorro o retiro 🐷 -->
-          @let clase = clasificar(movimiento);
-          @let deAhorros = clase === 'ahorro' || clase === 'retiro';
-          <span
-            class="flex size-9 shrink-0 items-center justify-center rounded-full text-sm"
-            [class]="
-              deAhorros
-                ? 'bg-sky-100 text-sky-700'
-                : movimiento.tipo === 'ingreso'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-            "
-            aria-hidden="true"
-          >
-            {{ deAhorros ? '🐷' : movimiento.tipo === 'ingreso' ? '▲' : '▼' }}
-          </span>
-
-          <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-gray-900">{{ movimiento.descripcion }}</p>
-            <p class="text-sm text-gray-500">
-              <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                {{ movimiento.categoria }}
+    <!-- Lista agrupada por día ("Hoy", "Ayer", "Lunes, 3 de noviembre") con lo que cambió el saldo ese día -->
+    <div role="region" aria-label="Lista de movimientos" [attr.aria-busy]="cargandoPrimeraVez()">
+      @if (cargandoPrimeraVez()) {
+        <!-- Esqueleto mientras llega la primera carga (en Render gratis puede tardar) -->
+        <p class="sr-only">Cargando movimientos…</p>
+        <ul aria-hidden="true">
+          @for (fila of [1, 2, 3, 4, 5, 6]; track fila) {
+            <li class="flex items-center gap-4 border-b border-gray-100 px-4 py-3 sm:px-6">
+              <span class="esqueleto size-9 shrink-0 rounded-full"></span>
+              <span class="flex-1 space-y-2">
+                <span class="esqueleto block h-4 w-2/5"></span>
+                <span class="esqueleto block h-3 w-1/4"></span>
               </span>
-              @if (movimiento.automatico) {
-                <span
-                  class="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700"
-                  title="Registrado automáticamente"
-                  >🔁 Automático</span
+              <span class="esqueleto h-4 w-20"></span>
+            </li>
+          }
+        </ul>
+      } @else {
+        @for (dia of diasVisibles(); track dia.fecha) {
+          <section [attr.aria-labelledby]="'dia-' + dia.fecha">
+            <h3
+              [id]="'dia-' + dia.fecha"
+              class="flex items-baseline justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-xs font-semibold text-gray-600 sm:px-6"
+            >
+              <span>{{ dia.titulo }}</span>
+              <span class="font-medium text-gray-500" title="Cuánto cambió tu saldo ese día">
+                {{ dia.neto > 0 ? '+' : dia.neto < 0 ? '−' : '' }} S/
+                {{ abs(dia.neto) | number: '1.2-2' }}
+              </span>
+            </h3>
+            <ul class="divide-y divide-gray-100">
+              @for (movimiento of dia.movimientos; track movimiento.id) {
+                @let clase = clasificar(movimiento);
+                @let deAhorros = clase === 'ahorro' || clase === 'retiro';
+                @let estilo = apariencia(movimiento);
+                <!--
+                  Celular: descripción y monto arriba; categoría y botones abajo (así la descripción no se corta).
+                  Computadora: los botones van en su propia columna y aparecen al pasar el mouse.
+                -->
+                <li
+                  class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] sm:gap-x-4 sm:px-6 sm:py-3"
+                  [class.bg-green-50]="editando()?.id === movimiento.id"
                 >
+                  <app-icono-categoria
+                    [icono]="estilo.icono"
+                    [color]="estilo.color"
+                    class="col-start-1 row-span-2 row-start-1"
+                  />
+
+                  <p class="col-start-2 row-start-1 truncate font-medium text-gray-900">
+                    {{ movimiento.descripcion }}
+                  </p>
+                  <p
+                    class="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-x-1.5 text-sm text-gray-500"
+                  >
+                    <span>{{ movimiento.categoria }}</span>
+                    <!-- Si se pagó en otra moneda, también se muestra cuánto fue -->
+                    @if (movimiento.monedaOriginal; as monedaOriginal) {
+                      <span class="text-xs">
+                        · {{ SIMBOLO_MONEDA[monedaOriginal] }}
+                        {{ movimiento.montoOriginal | number: '1.2-2' }}
+                      </span>
+                    }
+                    @if (movimiento.automatico) {
+                      <span
+                        class="inline-flex items-center gap-1 rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700"
+                        title="Registrado automáticamente"
+                      >
+                        <app-icono nombre="repetir" class="size-3" />
+                        Automático
+                      </span>
+                    }
+                  </p>
+
+                  <p
+                    class="col-start-3 row-start-1 text-right font-semibold whitespace-nowrap sm:row-span-2"
+                    [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
+                    [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
+                    [class.text-sky-700]="deAhorros"
+                  >
+                    {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
+                    {{ movimiento.monto | number: '1.2-2' }}
+                  </p>
+
+                  <!-- En computadoras aparecen al pasar el mouse; en celulares y tablets táctiles se ven siempre -->
+                  <div
+                    class="col-start-3 row-start-2 flex justify-end gap-1 sm:col-start-4 sm:row-span-2 sm:row-start-1 con-mouse:opacity-0 con-mouse:group-hover:opacity-100 con-mouse:focus-within:opacity-100"
+                  >
+                    @if (clase === 'ingreso' || clase === 'gasto') {
+                      <button
+                        type="button"
+                        (click)="registrarDeNuevo(movimiento)"
+                        [attr.aria-label]="'Registrar de nuevo ' + movimiento.descripcion"
+                        title="Registrar de nuevo (con la fecha de hoy)"
+                        class="rounded-md p-1.5 text-gray-500 transition hover:bg-sky-50 hover:text-sky-700"
+                      >
+                        <svg
+                          class="size-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="12" height="12" rx="2" />
+                          <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+                        </svg>
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="editar(movimiento)"
+                      [attr.aria-label]="'Editar ' + movimiento.descripcion"
+                      title="Editar"
+                      class="rounded-md p-1.5 text-gray-500 transition hover:bg-green-50 hover:text-green-700"
+                    >
+                      <svg
+                        class="size-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="eliminar(movimiento)"
+                      [attr.aria-label]="'Eliminar ' + movimiento.descripcion"
+                      title="Eliminar (podrás deshacerlo)"
+                      class="rounded-md p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                    >
+                      <svg
+                        class="size-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
               }
-              · {{ movimiento.fecha | date: 'dd/MM/yyyy' }}
-            </p>
-          </div>
-
-          <p
-            class="shrink-0 font-semibold"
-            [class.text-green-600]="!deAhorros && movimiento.tipo === 'ingreso'"
-            [class.text-red-600]="!deAhorros && movimiento.tipo === 'gasto'"
-            [class.text-sky-700]="deAhorros"
-          >
-            {{ movimiento.tipo === 'ingreso' ? '+' : '-' }} S/
-            {{ movimiento.monto | number: '1.2-2' }}
-          </p>
-
-          <!-- En computadoras aparecen al pasar el mouse; en celulares y tablets táctiles se ven siempre -->
-          <div
-            class="flex shrink-0 gap-1 con-mouse:opacity-0 con-mouse:group-hover:opacity-100 con-mouse:focus-within:opacity-100"
-          >
-            @if (clase === 'ingreso' || clase === 'gasto') {
-              <button
-                type="button"
-                (click)="registrarDeNuevo(movimiento)"
-                [attr.aria-label]="'Registrar de nuevo ' + movimiento.descripcion"
-                title="Registrar de nuevo (con la fecha de hoy)"
-                class="rounded-md p-1.5 text-gray-500 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                <svg
-                  class="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="9" y="9" width="12" height="12" rx="2" />
-                  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-                </svg>
-              </button>
-            }
-            <button
-              type="button"
-              (click)="editar(movimiento)"
-              [attr.aria-label]="'Editar ' + movimiento.descripcion"
-              title="Editar"
-              class="rounded-md p-1.5 text-gray-500 transition hover:bg-green-50 hover:text-green-700"
-            >
-              <svg
-                class="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              (click)="eliminar(movimiento)"
-              [attr.aria-label]="'Eliminar ' + movimiento.descripcion"
-              title="Eliminar"
-              class="rounded-md p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
-            >
-              <svg
-                class="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
-                />
-              </svg>
-            </button>
-          </div>
-        </li>
-      } @empty {
-        <li class="px-6 py-12 text-center">
-          @if (cargando()) {
-            <p class="text-gray-500">Cargando movimientos…</p>
-          } @else {
+            </ul>
+          </section>
+        } @empty {
+          <div class="px-6 py-12 text-center">
             <p class="font-medium text-gray-900">No hay movimientos para mostrar.</p>
             @if (hayFiltros()) {
               <button
@@ -527,13 +651,41 @@
                 Agrega tu primer ingreso o gasto con el formulario.
               </p>
             }
-          }
-        </li>
-      }
-    </ul>
+          </div>
+        }
 
-    <p class="border-t border-gray-200 px-6 py-3 text-sm text-gray-500">
-      {{ filtrados().length }} {{ filtrados().length === 1 ? 'movimiento' : 'movimientos' }}
-    </p>
+        @if (restantes() > 0) {
+          <div class="border-t border-gray-100 p-3 text-center">
+            <button
+              type="button"
+              (click)="verMas()"
+              class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Ver más ({{ restantes() }} {{ restantes() === 1 ? 'movimiento' : 'movimientos' }})
+            </button>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Pie: cantidad y descarga -->
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-4 py-3 sm:px-6"
+    >
+      <p class="text-sm text-gray-500">
+        {{ filtrados().length }} {{ filtrados().length === 1 ? 'movimiento' : 'movimientos' }}
+      </p>
+      @if (filtrados().length > 0) {
+        <button
+          type="button"
+          (click)="exportar()"
+          title="Descarga lo que ves con los filtros actuales"
+          class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-semibold text-green-700 transition-colors hover:bg-green-50"
+        >
+          <app-icono nombre="descargar" class="size-4" />
+          Descargar Excel (CSV)
+        </button>
+      }
+    </div>
   </section>
 </div>

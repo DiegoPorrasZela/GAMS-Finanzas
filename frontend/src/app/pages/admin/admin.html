@@ -14,31 +14,86 @@
       [formGroup]="formulario"
       (ngSubmit)="guardarCategoria()"
       novalidate
-      class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-start"
+      class="space-y-4 border-b border-gray-200 p-4"
     >
-      <div class="flex-1">
-        <label for="nombre-categoria" class="sr-only">Nombre de la categoría</label>
-        <input
-          id="nombre-categoria"
-          type="text"
-          formControlName="nombre"
-          placeholder="Nombre de la categoría"
-          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-          [class.border-red-500!]="tieneErrorNombre()"
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <!-- Vista previa: así se verá en las listas -->
+        @let previa = vistaPrevia();
+        <app-icono-categoria
+          [icono]="previa.icono ?? 'etiqueta'"
+          [color]="previa.color ?? 'gris'"
+          class="hidden sm:inline-flex"
         />
-        @if (tieneErrorNombre()) {
-          <p class="mt-1 text-xs text-red-600">Escribe un nombre (máx. 50 caracteres).</p>
-        }
+        <div class="flex-1">
+          <label for="nombre-categoria" class="sr-only">Nombre de la categoría</label>
+          <input
+            id="nombre-categoria"
+            type="text"
+            formControlName="nombre"
+            placeholder="Nombre de la categoría"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+            [class.border-red-500!]="tieneErrorNombre()"
+          />
+          @if (tieneErrorNombre()) {
+            <p class="mt-1 text-xs text-red-600">Escribe un nombre (máx. 50 caracteres).</p>
+          }
+        </div>
+        <label for="tipo-categoria" class="sr-only">Tipo</label>
+        <select
+          id="tipo-categoria"
+          formControlName="tipo"
+          class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
+        >
+          <option value="gasto">Gasto</option>
+          <option value="ingreso">Ingreso</option>
+        </select>
       </div>
-      <label for="tipo-categoria" class="sr-only">Tipo</label>
-      <select
-        id="tipo-categoria"
-        formControlName="tipo"
-        class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/30 focus:outline-none"
-      >
-        <option value="gasto">Gasto</option>
-        <option value="ingreso">Ingreso</option>
-      </select>
+
+      <!-- Ícono -->
+      <fieldset>
+        <legend class="text-xs font-medium text-gray-600">Ícono</legend>
+        <div class="mt-1.5 grid grid-cols-8 gap-1 sm:grid-cols-12">
+          @for (icono of iconos; track icono.clave) {
+            <label [title]="icono.nombre" class="cursor-pointer">
+              <input
+                type="radio"
+                formControlName="icono"
+                [value]="icono.clave"
+                [attr.aria-label]="icono.nombre"
+                class="peer sr-only"
+              />
+              <span
+                class="flex aspect-square items-center justify-center rounded-md border border-transparent text-gray-500 transition-colors hover:bg-gray-100 peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:text-green-700 peer-focus-visible:ring-2 peer-focus-visible:ring-green-500"
+              >
+                <app-icono [nombre]="icono.clave" class="size-5" />
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <!-- Color -->
+      <fieldset>
+        <legend class="text-xs font-medium text-gray-600">Color</legend>
+        <div class="mt-1.5 flex flex-wrap gap-2">
+          @for (color of colores; track color.clave) {
+            <label [title]="color.nombre" class="cursor-pointer">
+              <input
+                type="radio"
+                formControlName="color"
+                [value]="color.clave"
+                [attr.aria-label]="color.nombre"
+                class="peer sr-only"
+              />
+              <span
+                class="block size-7 rounded-full ring-offset-2 transition peer-checked:ring-2 peer-checked:ring-gray-900 peer-focus-visible:ring-2 peer-focus-visible:ring-green-500"
+                [class]="color.muestra"
+              ></span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
       <div class="flex gap-2">
         <button
           type="submit"
@@ -71,10 +126,19 @@
                 class="flex items-center justify-between gap-2 py-2"
                 [class.text-green-700]="editando()?.id === categoria.id"
               >
-                <span class="truncate text-gray-900">{{ categoria.nombre }}</span>
+                <span class="flex min-w-0 items-center gap-2">
+                  <app-icono-categoria
+                    [icono]="categoria.icono"
+                    [color]="categoria.color"
+                    tamano="chico"
+                  />
+                  <span class="truncate text-gray-900">{{ categoria.nombre }}</span>
+                </span>
                 <span class="flex shrink-0 gap-2 text-sm">
                   @if (esDelSistema(categoria)) {
-                    <span class="text-xs text-gray-500" title="Sostiene reglas de la aplicación (saldo inicial y ahorros)"
+                    <span
+                      class="text-xs text-gray-500"
+                      title="Sostiene reglas de la aplicación (saldo inicial y ahorros)"
                       >Del sistema</span
                     >
                   } @else {

@@ -1,0 +1,147 @@
+@if (hayDatos()) {
+  <figure class="mt-4">
+    <figcaption class="sr-only">
+      Ingresos y gastos por mes, en soles. Usa Tab para recorrer los meses o abre la tabla.
+    </figcaption>
+
+    <!-- Leyenda -->
+    <div class="flex items-center gap-4 text-xs text-gray-600" aria-hidden="true">
+      <span class="inline-flex items-center gap-1.5">
+        <span class="size-2.5 rounded-sm bg-green-500"></span>
+        Ingresos
+      </span>
+      <span class="inline-flex items-center gap-1.5">
+        <span class="size-2.5 rounded-sm bg-red-600"></span>
+        Gastos
+      </span>
+    </div>
+
+    <div class="mt-3 flex h-48">
+      <!-- Eje de montos -->
+      <div class="relative w-12 shrink-0 text-[11px] text-gray-500 tabular-nums" aria-hidden="true">
+        @for (marca of marcas(); track marca.valor) {
+          <span class="absolute right-2 translate-y-1/2" [style.bottom.%]="marca.posicion">
+            {{ marca.texto }}
+          </span>
+        }
+      </div>
+
+      <!-- Área del gráfico -->
+      <div class="relative flex-1">
+        <!-- Líneas guía (la del cero es la base de las columnas) -->
+        @for (marca of marcas(); track marca.valor) {
+          <div
+            class="absolute inset-x-0 border-t"
+            [class.border-gray-300]="marca.valor === 0"
+            [class.border-gray-100]="marca.valor !== 0"
+            [style.bottom.%]="marca.posicion"
+            aria-hidden="true"
+          ></div>
+        }
+
+        <div class="absolute inset-0 flex">
+          @for (mes of meses(); track mes.clave; let primero = $first; let ultimo = $last) {
+            <div
+              tabindex="0"
+              role="img"
+              [attr.aria-label]="descripcion(mes)"
+              class="group relative flex flex-1 items-end justify-center gap-0.5 rounded-t-md px-1 outline-none hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:ring-2 focus-visible:ring-green-500"
+            >
+              <div
+                class="w-full max-w-6 rounded-t-[4px] bg-green-500"
+                [style.height.%]="altura(mes.ingresos)"
+              ></div>
+              <div
+                class="w-full max-w-6 rounded-t-[4px] bg-red-600"
+                [style.height.%]="altura(mes.gastos)"
+              ></div>
+
+              <!-- Detalle del mes: primero el valor, después qué es -->
+              <div
+                aria-hidden="true"
+                class="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-max rounded-lg bg-white px-3 py-2 text-xs shadow-lg ring-1 ring-gray-900/10 group-hover:block group-focus-visible:block"
+                [class.left-0]="primero"
+                [class.right-0]="ultimo"
+                [class.left-1/2]="!primero && !ultimo"
+                [class.-translate-x-1/2]="!primero && !ultimo"
+              >
+                <p class="font-semibold text-gray-900">{{ mes.nombre }}</p>
+                <p class="mt-1 flex items-center gap-2">
+                  <span class="h-0.5 w-3 rounded-full bg-green-500"></span>
+                  <strong class="text-gray-900 tabular-nums"
+                    >S/ {{ mes.ingresos | number: '1.2-2' }}</strong
+                  >
+                  <span class="text-gray-500">ingresos</span>
+                </p>
+                <p class="mt-0.5 flex items-center gap-2">
+                  <span class="h-0.5 w-3 rounded-full bg-red-600"></span>
+                  <strong class="text-gray-900 tabular-nums"
+                    >S/ {{ mes.gastos | number: '1.2-2' }}</strong
+                  >
+                  <span class="text-gray-500">gastos</span>
+                </p>
+                @if (mes.ahorro > 0) {
+                  <p class="mt-1 text-gray-500">
+                    Separaste S/ {{ mes.ahorro | number: '1.2-2' }} a tus ahorros
+                  </p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Meses -->
+    <div class="ml-12 flex" aria-hidden="true">
+      @for (mes of meses(); track mes.clave) {
+        <span
+          class="flex-1 pt-1.5 text-center text-xs"
+          [class.font-semibold]="mes.clave === seleccionado()"
+          [class.text-gray-900]="mes.clave === seleccionado()"
+          [class.text-gray-500]="mes.clave !== seleccionado()"
+        >
+          {{ mes.etiqueta }}
+        </span>
+      }
+    </div>
+
+    <!-- Los mismos datos en una tabla (para leerlos sin pasar el mouse) -->
+    <details class="mt-4 text-sm">
+      <summary class="cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-700">
+        Ver como tabla
+      </summary>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full text-left tabular-nums">
+          <thead class="text-xs text-gray-500">
+            <tr>
+              <th scope="col" class="py-1 pr-3 font-medium">Mes</th>
+              <th scope="col" class="py-1 pr-3 text-right font-medium">Ingresos</th>
+              <th scope="col" class="py-1 pr-3 text-right font-medium">Gastos</th>
+              <th scope="col" class="py-1 text-right font-medium">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-gray-700">
+            @for (mes of meses(); track mes.clave) {
+              <tr>
+                <th scope="row" class="py-1.5 pr-3 font-medium text-gray-900">{{ mes.nombre }}</th>
+                <td class="py-1.5 pr-3 text-right">S/ {{ mes.ingresos | number: '1.2-2' }}</td>
+                <td class="py-1.5 pr-3 text-right">S/ {{ mes.gastos | number: '1.2-2' }}</td>
+                <td class="py-1.5 text-right">
+                  {{ mes.ingresos - mes.gastos < 0 ? '−' : '' }} S/
+                  {{ abs(mes.ingresos - mes.gastos) | number: '1.2-2' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </figure>
+} @else {
+  <p
+    class="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500"
+  >
+    Cuando registres ingresos y gastos, aquí verás cómo cambian mes a mes.
+  </p>
+}

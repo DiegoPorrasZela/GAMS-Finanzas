@@ -13,6 +13,7 @@ import {
   esAhorro,
   esRetiro,
 } from '../../models/finanzas.models';
+import { Icono } from '../../components/icono/icono';
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
@@ -35,7 +36,7 @@ const CADA: Record<Frecuencia, string> = {
 
 // Saldo ──(separar)──► Ahorros ──(aportar)──► Metas;  Ahorros ──(retirar)──► Saldo
 @Component({
-  imports: [ReactiveFormsModule, DatePipe, DecimalPipe],
+  imports: [ReactiveFormsModule, DatePipe, DecimalPipe, Icono],
   selector: 'app-metas',
   templateUrl: './metas.html',
 })
@@ -51,6 +52,10 @@ export class Metas {
   protected readonly textoFrecuencia = textoFrecuencia;
   protected readonly metas = this.servicio.metas;
   protected readonly cargando = this.servicio.cargando;
+  // Los montos del resumen salen de los movimientos: esqueleto mientras llegan por primera vez
+  protected readonly cargandoResumen = computed(
+    () => this.movimientosService.cargando() && this.movimientosService.movimientos().length === 0,
+  );
   protected readonly errorCarga = computed(
     () =>
       this.servicio.error() ??
@@ -61,9 +66,7 @@ export class Metas {
   private readonly toast = inject(ToastService);
 
   // ---- Dinero ----
-  private readonly totales = computed(() =>
-    calcularTotales(this.movimientosService.movimientos()),
-  );
+  private readonly totales = computed(() => calcularTotales(this.movimientosService.movimientos()));
   protected readonly saldo = computed(() => this.totales().saldo); // disponible para gastar
   protected readonly totalAhorrado = computed(() => this.totales().ahorro); // separado − retirado
   protected readonly enMetas = computed(() =>
@@ -88,7 +91,10 @@ export class Metas {
   protected readonly guardando = signal(false);
   protected readonly formulario = this.fb.group({
     nombre: ['', [Validators.required, Validators.maxLength(60)]],
-    montoObjetivo: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
+    montoObjetivo: this.fb.control<number | null>(null, [
+      Validators.required,
+      Validators.min(0.01),
+    ]),
     fechaLimite: ['', noPasada],
   });
 
@@ -113,7 +119,9 @@ export class Metas {
   }
 
   // Cuánto ahorrar por mes para llegar a tiempo (o si la fecha ya pasó)
-  protected sugerencia(meta: MetaAhorro): { vencida: boolean; meses: number; porMes: number } | null {
+  protected sugerencia(
+    meta: MetaAhorro,
+  ): { vencida: boolean; meses: number; porMes: number } | null {
     if (!meta.fechaLimite || meta.faltante <= 0) return null;
     if (meta.fechaLimite < this.hoy) return { vencida: true, meses: 0, porMes: 0 };
     const meses = mesesHasta(meta.fechaLimite);
@@ -142,7 +150,10 @@ export class Metas {
       return;
     }
     if (!separar && monto! > this.libres()) {
-      this.mostrar(`Solo tienes S/ ${this.libres().toFixed(2)} libres en tus ahorros para retirar.`, true);
+      this.mostrar(
+        `Solo tienes S/ ${this.libres().toFixed(2)} libres en tus ahorros para retirar.`,
+        true,
+      );
       return;
     }
     // Separar más de lo que hay en el saldo se avisa, no se bloquea (igual que un gasto)
@@ -154,7 +165,8 @@ export class Metas {
         tono: 'aviso',
         titulo: 'Tu saldo quedaría en negativo',
         mensaje: `Si separas ${soles(monto!)}, tu saldo para gastar quedaría en ${soles(saldoNuevo)}.`,
-        detalle: '¿Te falta registrar algún ingreso? Puedes separarlo igual si ese dinero ya lo tienes guardado.',
+        detalle:
+          '¿Te falta registrar algún ingreso? Puedes separarlo igual si ese dinero ya lo tienes guardado.',
         confirmar: 'Separar de todos modos',
         cancelar: 'Revisar',
       }))
@@ -164,7 +176,11 @@ export class Metas {
 
     const automatico = separar && frecuencia !== 'UNA_VEZ';
     const datos = {
-      descripcion: !separar ? CATEGORIA_RETIRO : automatico ? 'Ahorro automático' : CATEGORIA_AHORRO,
+      descripcion: !separar
+        ? CATEGORIA_RETIRO
+        : automatico
+          ? 'Ahorro automático'
+          : CATEGORIA_AHORRO,
       monto: monto!,
       fecha: this.hoy,
       categoriaId: categoria.id,
@@ -182,12 +198,12 @@ export class Metas {
           // El backend ya registró el de hoy: se vuelve a cargar la lista
           this.movimientosService.cargar();
           this.mostrar(
-            `🔁 Se separarán S/ ${monto!.toFixed(2)} a tus ahorros ${CADA[frecuencia as Frecuencia]}. El de hoy ya se separó.`,
+            `Se separarán S/ ${monto!.toFixed(2)} a tus ahorros ${CADA[frecuencia as Frecuencia]}. El de hoy ya se separó.`,
           );
         } else {
           this.mostrar(
             separar
-              ? `🐷 Separaste S/ ${monto!.toFixed(2)} a tus ahorros.`
+              ? `Separaste S/ ${monto!.toFixed(2)} a tus ahorros.`
               : `Retiraste S/ ${monto!.toFixed(2)} de tus ahorros: volvió a tu saldo.`,
           );
         }
@@ -313,7 +329,7 @@ export class Metas {
         this.aportandoA.set(null);
         this.mostrar(
           actualizada.porcentaje >= 100
-            ? `🎉 ¡Completaste la meta "${actualizada.nombre}"!`
+            ? `¡Completaste la meta "${actualizada.nombre}"!`
             : `Aporte de S/ ${monto!.toFixed(2)} registrado en "${actualizada.nombre}".`,
         );
       },

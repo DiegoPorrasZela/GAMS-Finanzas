@@ -79,7 +79,9 @@ describe('RegistroRapido', () => {
   });
 
   it('should register an income with an income category', async () => {
-    [...hoja.querySelectorAll('button')].find((b) => b.textContent?.includes('▲ Ingreso'))!.click();
+    [...hoja.querySelectorAll<HTMLButtonElement>('[aria-label="Tipo"] button')]
+      .find((b) => b.textContent?.includes('Ingreso'))!
+      .click();
     await fixture.whenStable();
     escribir('rapido-monto', '650');
     escribir('rapido-descripcion', 'Quincena');

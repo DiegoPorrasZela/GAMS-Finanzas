@@ -14,6 +14,14 @@
  */
 @custom-variant con-mouse (@media (hover: hover) and (pointer: fine));
 
+/*
+ * Bloque gris "esqueleto" que ocupa el lugar de un dato mientras carga (ej. class="esqueleto h-8 w-32").
+ * Late suavemente; si el usuario pidió menos animaciones en su sistema, queda quieto.
+ */
+@utility esqueleto {
+  @apply rounded-md bg-gray-200 motion-safe:animate-pulse;
+}
+
 /* Mientras un diálogo está abierto, la página de fondo no se desplaza */
 body:has(dialog[open]) {
   overflow: hidden;

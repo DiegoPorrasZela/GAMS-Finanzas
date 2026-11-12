@@ -39,7 +39,16 @@ export class AuthService {
     );
   }
 
+  // Tareas que deben terminar mientras el token sigue vigente (patrón Observer).
+  // Ej.: MovimientosService envía las eliminaciones que esperaban el "Deshacer".
+  private readonly antesDeCerrar: Array<() => void> = [];
+
+  alCerrarSesion(tarea: () => void): void {
+    this.antesDeCerrar.push(tarea);
+  }
+
   cerrarSesion(): void {
+    for (const tarea of this.antesDeCerrar) tarea();
     this.sesion.set(null);
     try {
       localStorage.removeItem(CLAVE);

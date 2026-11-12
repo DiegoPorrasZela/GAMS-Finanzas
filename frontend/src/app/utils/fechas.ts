@@ -59,7 +59,11 @@ export function fraseRepeticion(frecuencia: string, dia: number, fechaReferencia
 }
 
 // Para mostrar un automático: "Cada día", "El 15 y el último día de cada mes"…
-export function textoFrecuencia(r: { frecuencia: string; dia: number; proximoCargo: string }): string {
+export function textoFrecuencia(r: {
+  frecuencia: string;
+  dia: number;
+  proximoCargo: string;
+}): string {
   return capitalizar(fraseRepeticion(r.frecuencia, r.dia, r.proximoCargo));
 }
 
@@ -68,7 +72,8 @@ export function textoFrecuencia(r: { frecuencia: string; dia: number; proximoCar
 export function primeraFecha(desde: string, frecuencia: string, dia: number): string {
   if (frecuencia === 'DIARIA' || frecuencia === 'SEMANAL') return desde;
   const [anio, mes] = desde.split('-').map(Number);
-  const enMes = (a: number, m: number, d: number) => aFecha(a, m, Math.min(d, ultimoDiaDelMes(a, m)));
+  const enMes = (a: number, m: number, d: number) =>
+    aFecha(a, m, Math.min(d, ultimoDiaDelMes(a, m)));
   const [anioSig, mesSig] = mes === 12 ? [anio + 1, 1] : [anio, mes + 1];
 
   if (frecuencia === 'QUINCENAL') {
@@ -95,6 +100,48 @@ export function diasRestantesDelMes(): number {
   const fecha = new Date();
   const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
   return ultimoDia - fecha.getDate() + 1;
+}
+
+// "2026-11-09" y -7 → "2026-11-02"
+export function sumarDias(fecha: string, dias: number): string {
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  const resultado = new Date(anio, mes - 1, dia + dias);
+  return aFecha(resultado.getFullYear(), resultado.getMonth() + 1, resultado.getDate());
+}
+
+// Título de un día en la lista: "Hoy", "Ayer", "Lunes, 3 de noviembre" (con el año si no es el actual)
+export function tituloDia(fecha: string, referencia = hoy()): string {
+  if (fecha === referencia) return 'Hoy';
+  if (fecha === sumarDias(referencia, -1)) return 'Ayer';
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  const otroAnio = anio !== Number(referencia.slice(0, 4));
+  return capitalizar(
+    new Intl.DateTimeFormat('es-PE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      ...(otroAnio ? { year: 'numeric' } : {}),
+    }).format(new Date(anio, mes - 1, dia)),
+  );
+}
+
+// Los "cantidad" meses que terminan en "hasta" (AAAA-MM), del más antiguo al más reciente
+export function mesesHastaIncluido(hasta: string, cantidad: number): string[] {
+  const [anio, mes] = hasta.split('-').map(Number);
+  return Array.from({ length: cantidad }, (_, i) => {
+    const fecha = new Date(anio, mes - 1 - (cantidad - 1 - i), 1);
+    return claveMes(fecha.getFullYear(), fecha.getMonth() + 1);
+  });
+}
+
+// "2026-11" → "nov" (y "nov 2025" si es de otro año que "referencia")
+export function mesCorto(clave: string, referencia = mesActual()): string {
+  const [anio, mes] = clave.split('-').map(Number);
+  const texto = new Intl.DateTimeFormat('es-PE', { month: 'short' })
+    .format(new Date(anio, mes - 1, 1))
+    .replace('.', '')
+    .toLowerCase(); // según el navegador viene "Nov" o "nov."; en español va "nov"
+  return clave.slice(0, 4) === referencia.slice(0, 4) ? texto : `${texto} ${anio}`;
 }
 
 // Meses que quedan hasta una fecha, contando el mes actual (mínimo 1)
