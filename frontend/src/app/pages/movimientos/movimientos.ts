@@ -43,6 +43,7 @@ import {
   textoFrecuencia,
   tituloDia,
 } from '../../utils/fechas';
+import { restar, sumar } from '../../utils/dinero';
 import { ddmmaaaa, enMoneda, soles } from '../../utils/formato';
 import { noFutura } from '../../utils/validadores';
 
@@ -258,7 +259,10 @@ export class Movimientos {
     // El total de cada día se calcula con todos sus movimientos, aunque "Ver más" corte el día
     const netoPorDia = new Map<string, number>();
     for (const m of lista) {
-      netoPorDia.set(m.fecha, (netoPorDia.get(m.fecha) ?? 0) + efectoEnSaldo(m.tipo, m.monto));
+      netoPorDia.set(
+        m.fecha,
+        sumar([netoPorDia.get(m.fecha) ?? 0, efectoEnSaldo(m.tipo, m.monto)]),
+      );
     }
     const dias: Dia[] = [];
     for (const m of lista.slice(0, this.limite())) {
@@ -356,10 +360,11 @@ export class Movimientos {
     const editando = this.editando();
 
     // Avisar (no bloquear) si el saldo total quedaría en negativo
-    const saldoNuevo =
-      this.saldoTotal() -
-      (editando ? efectoEnSaldo(editando.tipo, editando.monto) : 0) +
-      efectoEnSaldo(this.tipoNuevo(), datos.monto);
+    const saldoNuevo = sumar([
+      this.saldoTotal(),
+      editando ? -efectoEnSaldo(editando.tipo, editando.monto) : 0,
+      efectoEnSaldo(this.tipoNuevo(), datos.monto),
+    ]);
     if (
       saldoNuevo < 0 &&
       saldoNuevo < this.saldoTotal() &&
@@ -491,7 +496,7 @@ export class Movimientos {
   // Patrón "Deshacer": se quita al instante y hay unos segundos para recuperarlo (sin diálogo de confirmación)
   protected eliminar(movimiento: Movimiento): void {
     if (this.editando()?.id === movimiento.id) this.cancelarEdicion();
-    const saldoNuevo = this.saldoTotal() - efectoEnSaldo(movimiento.tipo, movimiento.monto);
+    const saldoNuevo = restar(this.saldoTotal(), efectoEnSaldo(movimiento.tipo, movimiento.monto));
 
     const deshacer = this.servicio.eliminarConDeshacer(movimiento.id, (e) =>
       this.toast.error(`No se pudo eliminar "${movimiento.descripcion}": ${mensajeDeError(e)}`),

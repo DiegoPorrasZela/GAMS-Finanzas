@@ -22,6 +22,7 @@ import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
 import { RecurrentesService } from '../../services/recurrentes.service';
 import { hoy, mesesHasta, textoFrecuencia } from '../../utils/fechas';
+import { esMayor, restar, sumar } from '../../utils/dinero';
 import { ddmmaaaa, soles } from '../../utils/formato';
 import { noFutura, noPasada } from '../../utils/validadores';
 
@@ -69,10 +70,8 @@ export class Metas {
   private readonly totales = computed(() => calcularTotales(this.movimientosService.movimientos()));
   protected readonly saldo = computed(() => this.totales().saldo); // disponible para gastar
   protected readonly totalAhorrado = computed(() => this.totales().ahorro); // separado − retirado
-  protected readonly enMetas = computed(() =>
-    this.metas().reduce((suma, meta) => suma + meta.ahorrado, 0),
-  );
-  protected readonly libres = computed(() => this.totalAhorrado() - this.enMetas()); // sin asignar a metas
+  protected readonly enMetas = computed(() => sumar(this.metas().map((meta) => meta.ahorrado)));
+  protected readonly libres = computed(() => restar(this.totalAhorrado(), this.enMetas())); // sin asignar a metas
 
   // ---- Separar a ahorros / retirar ----
   protected readonly accion = signal<'separar' | 'retirar' | null>(null);
@@ -149,7 +148,7 @@ export class Metas {
       this.mostrar('Todavía se están cargando los datos. Inténtalo en un momento.', true);
       return;
     }
-    if (!separar && monto! > this.libres()) {
+    if (!separar && esMayor(monto!, this.libres())) {
       this.mostrar(
         `Solo tienes S/ ${this.libres().toFixed(2)} libres en tus ahorros para retirar.`,
         true,
@@ -157,7 +156,7 @@ export class Metas {
       return;
     }
     // Separar más de lo que hay en el saldo se avisa, no se bloquea (igual que un gasto)
-    const saldoNuevo = this.saldo() - monto!;
+    const saldoNuevo = restar(this.saldo(), monto!);
     if (
       separar &&
       saldoNuevo < 0 &&
@@ -315,7 +314,7 @@ export class Metas {
 
     const { monto, fecha } = this.formAporte.getRawValue();
     // Los aportes salen de los ahorros libres
-    if (monto! > this.libres()) {
+    if (esMayor(monto!, this.libres())) {
       this.mostrar(
         this.libres() > 0
           ? `En tus ahorros tienes S/ ${this.libres().toFixed(2)} libres. Separa más a tus ahorros para aportar esa cantidad.`

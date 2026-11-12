@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { restar } from '../../utils/dinero';
 import { soles } from '../../utils/formato';
 
 export interface ResumenMes {
@@ -55,6 +56,10 @@ export class GraficoMeses {
 
   protected readonly marcas = computed(() => this.escala().marcas);
   protected readonly abs = Math.abs;
+
+  protected diferencia(mes: ResumenMes): number {
+    return restar(mes.ingresos, mes.gastos);
+  }
 
   protected altura(valor: number): number {
     return (valor * 100) / this.escala().tope;

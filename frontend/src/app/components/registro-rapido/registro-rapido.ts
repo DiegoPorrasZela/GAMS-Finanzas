@@ -31,6 +31,7 @@ import { RegistroRapidoService } from '../../services/registro-rapido.service';
 import { aSoles, conversionASoles } from '../../services/tipo-cambio.service';
 import { ToastService } from '../../services/toast.service';
 import { hoy } from '../../utils/fechas';
+import { restar } from '../../utils/dinero';
 import { ddmmaaaa, enMoneda, soles } from '../../utils/formato';
 import { noFutura } from '../../utils/validadores';
 
@@ -187,7 +188,10 @@ export class RegistroRapido {
         : `${enMoneda(monto!, SIMBOLO_MONEDA[moneda])} (${soles(montoEnSoles)})`;
 
     // Misma regla que en Movimientos: un gasto que deja el saldo en negativo se avisa, no se bloquea
-    const saldoNuevo = calcularTotales(this.movimientosService.movimientos()).saldo - montoEnSoles;
+    const saldoNuevo = restar(
+      calcularTotales(this.movimientosService.movimientos()).saldo,
+      montoEnSoles,
+    );
     if (
       tipo === 'gasto' &&
       saldoNuevo < 0 &&

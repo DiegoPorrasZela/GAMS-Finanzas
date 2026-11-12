@@ -17,6 +17,7 @@ export interface Tasa {
 export interface MonedaApi {
   iso_code: string;
   name: string;
+  type: 'currency' | 'crypto' | 'metal'; // la API también trae criptomonedas y metales
 }
 
 // Cuántos soles vale 1 unidad de la moneda, y de qué día es esa tasa

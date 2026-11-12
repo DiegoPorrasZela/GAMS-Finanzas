@@ -92,7 +92,12 @@ export class TipoCambio {
 
   constructor() {
     this.servicio.obtenerMonedas().subscribe({
-      next: (lista) => this.monedas.set(lista.map((m) => this.opcion(m.iso_code, m.name))),
+      // Solo monedas: las criptomonedas (AAVE, USDT…) y los metales no son monedas ISO
+      // y Intl no sabe nombrarlas ni darles formato
+      next: (lista) =>
+        this.monedas.set(
+          lista.filter((m) => m.type === 'currency').map((m) => this.opcion(m.iso_code, m.name)),
+        ),
       // Si falla, nos quedamos con las populares
       error: () => {},
     });
@@ -142,7 +147,12 @@ export class TipoCambio {
   }
 
   protected formatearDinero(valor: number, moneda: string): string {
-    return new Intl.NumberFormat('es-PE', { style: 'currency', currency: moneda }).format(valor);
+    try {
+      return new Intl.NumberFormat('es-PE', { style: 'currency', currency: moneda }).format(valor);
+    } catch {
+      // Código que Intl no reconoce: se muestra el número con el código al lado
+      return `${valor.toLocaleString('es-PE', { maximumFractionDigits: 2 })} ${moneda}`;
+    }
   }
 
   protected formatearTasa(valor: number): string {
@@ -167,7 +177,12 @@ export class TipoCambio {
   }
 
   private opcion(codigo: string, nombreApi = codigo): OpcionMoneda {
-    const nombre = this.nombresEs.of(codigo) ?? nombreApi;
+    let nombre = nombreApi;
+    try {
+      nombre = this.nombresEs.of(codigo) ?? nombreApi; // nombre en español si Intl lo conoce
+    } catch {
+      // Código que no es ISO (ej. de 4 letras): se usa el nombre que da la API
+    }
     return { codigo, nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1) };
   }
 

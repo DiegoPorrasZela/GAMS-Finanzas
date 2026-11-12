@@ -15,6 +15,7 @@ import { AuthService } from '../../services/auth.service';
 import { CategoriasService } from '../../services/categorias.service';
 import { DialogoService } from '../../services/dialogo.service';
 import { mensajeDeError } from '../../services/errores';
+import { restar, sumar } from '../../utils/dinero';
 import { ddmmaaaa, soles } from '../../utils/formato';
 import { MetasService } from '../../services/metas.service';
 import { MovimientosService, calcularTotales } from '../../services/movimientos.service';
@@ -94,9 +95,9 @@ export class Inicio {
   // Lo separado a ahorros ya salió del saldo: todo el saldo está disponible para gastar
   protected readonly saldoTotal = computed(() => this.totalesTodos().saldo);
   protected readonly enMetas = computed(() =>
-    this.metasService.metas().reduce((suma, meta) => suma + meta.ahorrado, 0),
+    sumar(this.metasService.metas().map((meta) => meta.ahorrado)),
   );
-  protected readonly enAhorros = computed(() => this.totalesTodos().ahorro - this.enMetas());
+  protected readonly enAhorros = computed(() => restar(this.totalesTodos().ahorro, this.enMetas()));
   protected readonly sinMovimientos = computed(
     () => !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
   );
@@ -129,9 +130,9 @@ export class Inicio {
     // Solo gastos de consumo: lo separado a ahorros no es un gasto
     for (const m of this.movimientosDelMes().filter((m) => clasificar(m) === 'gasto')) {
       const actual = totales.get(m.categoriaId) ?? { categoria: m.categoria, monto: 0 };
-      totales.set(m.categoriaId, { ...actual, monto: actual.monto + m.monto });
+      totales.set(m.categoriaId, { ...actual, monto: sumar([actual.monto, m.monto]) });
     }
-    const totalGastos = [...totales.values()].reduce((suma, t) => suma + t.monto, 0);
+    const totalGastos = sumar([...totales.values()].map((t) => t.monto));
     const mayor = Math.max(0, ...[...totales.values()].map((t) => t.monto));
     return [...totales]
       .sort((a, b) => b[1].monto - a[1].monto)
@@ -185,7 +186,7 @@ export class Inicio {
     // ahorro = lo que separaste a tus ahorros este mes (menos lo que retiraste)
     const { gastos, ahorro } = this.totalesMes();
     const porcentaje = Math.round((gastos * 100) / presupuesto.limiteGasto);
-    const restante = presupuesto.limiteGasto - gastos;
+    const restante = restar(presupuesto.limiteGasto, gastos);
     const dias = this.esMesActual() ? diasRestantesDelMes() : null;
 
     return {
@@ -290,12 +291,12 @@ export class Inicio {
     if (ingresos <= 0) return null;
     const { limiteGasto, ahorroObjetivo } = this.formPresupuesto.getRawValue();
     const ahorro = ahorroObjetivo ?? 0;
-    const total = (limiteGasto ?? 0) + ahorro;
+    const total = sumar([limiteGasto ?? 0, ahorro]);
     return {
       ingresos,
       ahorro,
       total,
-      sugerido: Math.max(0, ingresos - ahorro),
+      sugerido: Math.max(0, restar(ingresos, ahorro)),
       excede: limiteGasto !== null && total > ingresos,
     };
   }

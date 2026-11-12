@@ -24,15 +24,31 @@ describe('TipoCambio', () => {
     http
       .expectOne((req) => req.url.endsWith('/currencies'))
       .flush([
-        { iso_code: 'USD', name: 'United States Dollar' },
-        { iso_code: 'PEN', name: 'Peruvian Sol' },
-        { iso_code: 'EUR', name: 'Euro' },
+        { iso_code: 'USD', name: 'United States Dollar', type: 'currency' },
+        { iso_code: 'PEN', name: 'Peruvian Sol', type: 'currency' },
+        { iso_code: 'EUR', name: 'Euro', type: 'currency' },
+        { iso_code: 'KRW', name: 'South Korean Won', type: 'currency' },
+        // La API también trae criptomonedas (algunas con 4 letras) y metales: no son monedas
+        { iso_code: 'AAVE', name: 'Aave', type: 'crypto' },
+        { iso_code: 'BTC', name: 'Bitcoin', type: 'crypto' },
+        { iso_code: 'XAU', name: 'Gold', type: 'metal' },
       ]);
   });
 
   afterEach(() => http.verify());
 
   const texto = () => (fixture.nativeElement as HTMLElement).textContent;
+
+  it('should list every currency from the API, without cryptocurrencies or metals', async () => {
+    http.expectOne((r) => r.url.endsWith('/rates')).flush(tasasUsdPen);
+    await fixture.whenStable();
+    const select = (fixture.nativeElement as HTMLElement).querySelector('select')!;
+
+    expect(select.querySelector('option[value="KRW"]')?.textContent).toContain('KRW');
+    expect(select.querySelector('option[value="AAVE"]')).toBeNull();
+    expect(select.querySelector('option[value="BTC"]')).toBeNull();
+    expect(select.querySelector('option[value="XAU"]')).toBeNull();
+  });
 
   it('should convert from USD to PEN by default', async () => {
     const req = http.expectOne((r) => r.url.endsWith('/rates'));

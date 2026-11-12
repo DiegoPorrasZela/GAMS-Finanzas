@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
+import { MetasService } from '../../services/metas.service';
+import { MovimientosService } from '../../services/movimientos.service';
 import { ToastService } from '../../services/toast.service';
 import { Metas } from './metas';
 
@@ -119,6 +121,44 @@ describe('Metas', () => {
     await fixture.whenStable();
 
     expect(notificaciones()).toContain('Solo tienes S/ 1450.00 libres en tus ahorros para retirar');
+  });
+
+  // Ahorros con céntimos: 10.10 + 20.20 = 30.30 libres (antes daba 30.2999… y se bloqueaba)
+  async function conAhorrosDe10y20() {
+    TestBed.inject(MovimientosService).cargar();
+    http.expectOne(`${api}/movimientos`).flush([
+      { id: 1, descripcion: 'Sueldo', monto: 100, fecha: '2026-11-01', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
+      { id: 2, descripcion: 'Ahorro', monto: 10.1, fecha: '2026-11-01', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false },
+      { id: 3, descripcion: 'Ahorro', monto: 20.2, fecha: '2026-11-02', tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro', automatico: false },
+    ]);
+    TestBed.inject(MetasService).cargar();
+    http.expectOne(`${api}/metas`).flush([{ ...laptop, ahorrado: 0, faltante: 2500, porcentaje: 0, aportes: [] }]);
+    await fixture.whenStable();
+  }
+
+  it('should withdraw exactly all the free savings when they have cents', async () => {
+    await conAhorrosDe10y20();
+    boton('Retirar').click();
+    await fixture.whenStable();
+    escribir('#monto-ahorro', '30.30');
+    pagina.querySelector('#monto-ahorro')!.closest('form')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
+    expect(peticion.request.body).toMatchObject({ monto: 30.3, categoriaId: 16 });
+    expect(notificaciones()).not.toContain('Solo tienes');
+  });
+
+  it('should contribute exactly all the free savings when they have cents', async () => {
+    await conAhorrosDe10y20();
+    boton('+ Aportar').click();
+    await fixture.whenStable();
+    escribir('#monto-aporte-1', '30.30');
+    pagina.querySelector('#monto-aporte-1')!.closest('form')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    const peticion = http.expectOne({ method: 'POST', url: `${api}/metas/1/aportes` });
+    expect(peticion.request.body).toMatchObject({ monto: 30.3 });
   });
 
   it('should show the progress and how much to save per month', () => {

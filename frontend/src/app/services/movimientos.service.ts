@@ -9,6 +9,7 @@ import {
   TipoMovimiento,
   clasificar,
 } from '../models/finanzas.models';
+import { aCentimos, deCentimos } from '../utils/dinero';
 import { AuthService } from './auth.service';
 import { mensajeDeError } from './errores';
 
@@ -34,29 +35,36 @@ export const SEGUNDOS_PARA_DESHACER = 5;
 // - gastos: lo consumido (sin lo que se separó a ahorros)
 // - ahorro: lo separado a ahorros menos lo retirado
 // - saldo: cómo cambió el dinero disponible (todo lo que entró menos todo lo que salió)
+// Se suma en céntimos (enteros) para que los decimales no se desvíen (ver utils/dinero.ts).
 export function calcularTotales(lista: Movimiento[]) {
   let ingresos = 0;
   let gastos = 0;
   let ahorro = 0;
   let saldo = 0;
   for (const m of lista) {
-    saldo += m.tipo === 'ingreso' ? m.monto : -m.monto;
+    const centimos = aCentimos(m.monto);
+    saldo += m.tipo === 'ingreso' ? centimos : -centimos;
     switch (clasificar(m)) {
       case 'ingreso':
-        ingresos += m.monto;
+        ingresos += centimos;
         break;
       case 'gasto':
-        gastos += m.monto;
+        gastos += centimos;
         break;
       case 'ahorro':
-        ahorro += m.monto;
+        ahorro += centimos;
         break;
       case 'retiro':
-        ahorro -= m.monto;
+        ahorro -= centimos;
         break;
     }
   }
-  return { ingresos, gastos, ahorro, saldo };
+  return {
+    ingresos: deCentimos(ingresos),
+    gastos: deCentimos(gastos),
+    ahorro: deCentimos(ahorro),
+    saldo: deCentimos(saldo),
+  };
 }
 
 interface EliminacionPendiente {

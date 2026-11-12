@@ -128,8 +128,8 @@
                 <td class="py-1.5 pr-3 text-right">S/ {{ mes.ingresos | number: '1.2-2' }}</td>
                 <td class="py-1.5 pr-3 text-right">S/ {{ mes.gastos | number: '1.2-2' }}</td>
                 <td class="py-1.5 text-right">
-                  {{ mes.ingresos - mes.gastos < 0 ? '−' : '' }} S/
-                  {{ abs(mes.ingresos - mes.gastos) | number: '1.2-2' }}
+                  {{ diferencia(mes) < 0 ? '−' : '' }} S/
+                  {{ abs(diferencia(mes)) | number: '1.2-2' }}
                 </td>
               </tr>
             }
