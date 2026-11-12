@@ -43,19 +43,25 @@ export class PresupuestosService {
     mes: number,
     datos: { limiteGasto: number; ahorroObjetivo: number },
   ): Observable<PresupuestoMensual> {
-    return this.http.put<PresupuestoMensual>(`${this.api}/${anio}/${mes}`, datos).pipe(
-      tap((guardado) =>
-        this.lista.update((lista) => [
-          guardado,
-          ...lista.filter((p) => p.anio !== anio || p.mes !== mes),
-        ]),
-      ),
-    );
+    return this.http
+      .put<PresupuestoMensual>(`${this.api}/${anio}/${mes}`, datos)
+      .pipe(
+        tap((guardado) =>
+          this.lista.update((lista) => [
+            guardado,
+            ...lista.filter((p) => p.anio !== anio || p.mes !== mes),
+          ]),
+        ),
+      );
   }
 
   eliminar(anio: number, mes: number): Observable<void> {
     return this.http
       .delete<void>(`${this.api}/${anio}/${mes}`)
-      .pipe(tap(() => this.lista.update((lista) => lista.filter((p) => p.anio !== anio || p.mes !== mes))));
+      .pipe(
+        tap(() =>
+          this.lista.update((lista) => lista.filter((p) => p.anio !== anio || p.mes !== mes)),
+        ),
+      );
   }
 }

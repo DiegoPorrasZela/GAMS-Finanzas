@@ -64,7 +64,6 @@ interface Dia {
 @Component({
   imports: [ReactiveFormsModule, DatePipe, DecimalPipe, Icono, IconoCategoria],
   selector: 'app-movimientos',
-  styleUrl: './movimientos.css',
   templateUrl: './movimientos.html',
 })
 export class Movimientos {

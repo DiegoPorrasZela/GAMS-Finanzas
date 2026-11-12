@@ -54,7 +54,11 @@ describe('Admin (categorías)', () => {
       .click();
     await fixture.whenStable();
 
-    expect(pagina.querySelector<HTMLInputElement>('input[aria-label="Comida"]')!.checked).toBe(true);
-    expect(pagina.querySelector<HTMLInputElement>('input[aria-label="Naranja"]')!.checked).toBe(true);
+    expect(pagina.querySelector<HTMLInputElement>('input[aria-label="Comida"]')!.checked).toBe(
+      true,
+    );
+    expect(pagina.querySelector<HTMLInputElement>('input[aria-label="Naranja"]')!.checked).toBe(
+      true,
+    );
   });
 });

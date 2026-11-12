@@ -52,7 +52,9 @@ export class MetasService {
   }
 
   actualizar(id: number, datos: DatosMeta): Observable<MetaAhorro> {
-    return this.http.put<MetaAhorro>(`${this.api}/${id}`, datos).pipe(tap((meta) => this.reemplazar(meta)));
+    return this.http
+      .put<MetaAhorro>(`${this.api}/${id}`, datos)
+      .pipe(tap((meta) => this.reemplazar(meta)));
   }
 
   eliminar(id: number): Observable<void> {

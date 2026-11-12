@@ -17,8 +17,26 @@ const categorias = [
   { id: 6, nombre: 'Comida', tipo: 'GASTO' },
 ];
 const movimientos = [
-  { id: 1, descripcion: 'Pago de prácticas', monto: 300, fecha: '2026-11-07', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
-  { id: 2, descripcion: 'Menú del almuerzo', monto: 15, fecha: '2026-11-06', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', automatico: false },
+  {
+    id: 1,
+    descripcion: 'Pago de prácticas',
+    monto: 300,
+    fecha: '2026-11-07',
+    tipo: 'INGRESO',
+    categoriaId: 1,
+    categoria: 'Sueldo',
+    automatico: false,
+  },
+  {
+    id: 2,
+    descripcion: 'Menú del almuerzo',
+    monto: 15,
+    fecha: '2026-11-06',
+    tipo: 'GASTO',
+    categoriaId: 6,
+    categoria: 'Comida',
+    automatico: false,
+  },
 ];
 
 describe('RegistroRapido', () => {
@@ -58,7 +76,9 @@ describe('RegistroRapido', () => {
 
   it('should open the sheet and only offer regular categories', () => {
     expect(hoja.querySelector('dialog')!.hasAttribute('open')).toBe(true);
-    const opciones = [...hoja.querySelectorAll('#rapido-categoria option')].map((o) => o.textContent?.trim());
+    const opciones = [...hoja.querySelectorAll('#rapido-categoria option')].map((o) =>
+      o.textContent?.trim(),
+    );
     expect(opciones).toEqual(['Comida']); // "Ahorro" es del sistema: se maneja en Metas
   });
 
@@ -69,12 +89,28 @@ describe('RegistroRapido', () => {
     await fixture.whenStable();
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
-    expect(peticion.request.body).toMatchObject({ descripcion: 'Pasaje', monto: 12.5, categoriaId: 6 });
-    peticion.flush({ id: 9, descripcion: 'Pasaje', monto: 12.5, fecha: '2026-11-11', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', automatico: false });
+    expect(peticion.request.body).toMatchObject({
+      descripcion: 'Pasaje',
+      monto: 12.5,
+      categoriaId: 6,
+    });
+    peticion.flush({
+      id: 9,
+      descripcion: 'Pasaje',
+      monto: 12.5,
+      fecha: '2026-11-11',
+      tipo: 'GASTO',
+      categoriaId: 6,
+      categoria: 'Comida',
+      automatico: false,
+    });
     await fixture.whenStable();
 
     expect(servicio.abierto()).toBe(false);
-    const textos = TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' ');
+    const textos = TestBed.inject(ToastService)
+      .toasts()
+      .map((t) => t.texto)
+      .join(' ');
     expect(textos).toContain('Gasto registrado: Pasaje');
   });
 
@@ -93,7 +129,9 @@ describe('RegistroRapido', () => {
   });
 
   it('should ask before saving an expense that leaves the balance negative', async () => {
-    const confirmar = vi.spyOn(TestBed.inject(DialogoService), 'confirmar').mockResolvedValue(false);
+    const confirmar = vi
+      .spyOn(TestBed.inject(DialogoService), 'confirmar')
+      .mockResolvedValue(false);
     escribir('rapido-monto', '500');
     escribir('rapido-descripcion', 'Celular');
     enviar();

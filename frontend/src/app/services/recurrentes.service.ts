@@ -48,7 +48,11 @@ export class RecurrentesService {
 
   // datos.fecha es "desde": el primer registro es la primera fecha del calendario a partir de ese día.
   // dia: día del mes para la frecuencia mensual (31 = último día); si no se envía, se usa el de la fecha.
-  crear(datos: DatosMovimiento, frecuencia: Frecuencia = 'MENSUAL', dia?: number): Observable<Recurrente> {
+  crear(
+    datos: DatosMovimiento,
+    frecuencia: Frecuencia = 'MENSUAL',
+    dia?: number,
+  ): Observable<Recurrente> {
     return this.http.post<RecurrenteApi>(this.api, { ...datos, frecuencia, dia }).pipe(
       map(desdeApi),
       tap((nuevo) => this.lista.update((lista) => [...lista, nuevo])),
@@ -58,7 +62,12 @@ export class RecurrentesService {
   cambiarEstado(recurrente: Recurrente, activo: boolean): Observable<Recurrente> {
     const { descripcion, monto, categoriaId } = recurrente;
     return this.http
-      .put<RecurrenteApi>(`${this.api}/${recurrente.id}`, { descripcion, monto, categoriaId, activo })
+      .put<RecurrenteApi>(`${this.api}/${recurrente.id}`, {
+        descripcion,
+        monto,
+        categoriaId,
+        activo,
+      })
       .pipe(
         map(desdeApi),
         tap((editado) =>

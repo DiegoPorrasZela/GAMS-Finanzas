@@ -45,7 +45,6 @@ function leer(clave: string): boolean {
 @Component({
   imports: [RouterLink, ReactiveFormsModule, DecimalPipe, Icono, IconoCategoria, GraficoMeses],
   selector: 'app-inicio',
-  styleUrl: './inicio.css',
   templateUrl: './inicio.html',
 })
 export class Inicio {

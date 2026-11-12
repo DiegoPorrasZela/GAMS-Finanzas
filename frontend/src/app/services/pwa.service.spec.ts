@@ -39,7 +39,9 @@ describe('PwaService', () => {
     window.dispatchEvent(new Event('appinstalled'));
 
     expect(pwa.sePuedeInstalar()).toBe(false);
-    const textos = TestBed.inject(ToastService).toasts().map((t) => t.texto);
+    const textos = TestBed.inject(ToastService)
+      .toasts()
+      .map((t) => t.texto);
     expect(textos.join(' ')).toContain('quedó instalada');
   });
 });

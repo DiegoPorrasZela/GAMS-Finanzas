@@ -27,7 +27,9 @@ describe('GraficoMeses', () => {
 
     const columnas = grafico.querySelectorAll<HTMLElement>('[role="img"]');
     expect(columnas.length).toBe(2);
-    const [ingresos, gastos] = [...columnas[0].querySelectorAll<HTMLElement>('.bg-green-500, .bg-red-600')];
+    const [ingresos, gastos] = [
+      ...columnas[0].querySelectorAll<HTMLElement>('.bg-green-500, .bg-red-600'),
+    ];
     expect(ingresos.style.height).toBe('50%'); // 1000 de un eje que llega a 2000
     expect(gastos.style.height).toBe('25%');
     expect(columnas[1].getAttribute('aria-label')).toBe(

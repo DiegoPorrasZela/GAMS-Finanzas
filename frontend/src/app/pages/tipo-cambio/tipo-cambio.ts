@@ -37,7 +37,6 @@ interface OpcionMoneda {
 @Component({
   imports: [DatePipe, GraficoTasas, Icono],
   selector: 'app-tipo-cambio',
-  styleUrl: './tipo-cambio.css',
   templateUrl: './tipo-cambio.html',
 })
 export class TipoCambio {

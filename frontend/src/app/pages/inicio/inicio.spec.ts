@@ -11,15 +11,64 @@ const mes = mesActual();
 const [anio, numeroMes] = mes.split('-').map(Number);
 
 const movimientos = [
-  { id: 1, descripcion: 'Pago de prácticas', monto: 1500, fecha: `${mes}-01`, tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo' },
-  { id: 2, descripcion: 'Menú', monto: 450, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
-  { id: 3, descripcion: 'Cine', monto: 50, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 11, categoria: 'Ocio' },
-  { id: 4, descripcion: 'Gasto antiguo', monto: 100, fecha: '2020-01-15', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida' },
+  {
+    id: 1,
+    descripcion: 'Pago de prácticas',
+    monto: 1500,
+    fecha: `${mes}-01`,
+    tipo: 'INGRESO',
+    categoriaId: 1,
+    categoria: 'Sueldo',
+  },
+  {
+    id: 2,
+    descripcion: 'Menú',
+    monto: 450,
+    fecha: `${mes}-01`,
+    tipo: 'GASTO',
+    categoriaId: 6,
+    categoria: 'Comida',
+  },
+  {
+    id: 3,
+    descripcion: 'Cine',
+    monto: 50,
+    fecha: `${mes}-01`,
+    tipo: 'GASTO',
+    categoriaId: 11,
+    categoria: 'Ocio',
+  },
+  {
+    id: 4,
+    descripcion: 'Gasto antiguo',
+    monto: 100,
+    fecha: '2020-01-15',
+    tipo: 'GASTO',
+    categoriaId: 6,
+    categoria: 'Comida',
+  },
   // Separado a ahorros: sale del saldo, pero no es un gasto (cuenta como ahorro del mes)
-  { id: 5, descripcion: 'Ahorro', monto: 300, fecha: `${mes}-01`, tipo: 'GASTO', categoriaId: 15, categoria: 'Ahorro' },
+  {
+    id: 5,
+    descripcion: 'Ahorro',
+    monto: 300,
+    fecha: `${mes}-01`,
+    tipo: 'GASTO',
+    categoriaId: 15,
+    categoria: 'Ahorro',
+  },
 ];
 const metas = [
-  { id: 1, nombre: 'Laptop', montoObjetivo: 2500, fechaLimite: null, ahorrado: 250, faltante: 2250, porcentaje: 10, aportes: [] },
+  {
+    id: 1,
+    nombre: 'Laptop',
+    montoObjetivo: 2500,
+    fechaLimite: null,
+    ahorrado: 250,
+    faltante: 2250,
+    porcentaje: 10,
+    aportes: [],
+  },
 ];
 
 describe('Inicio', () => {
@@ -69,7 +118,16 @@ describe('Inicio', () => {
       fecha: expect.any(String),
       categoriaId: 14,
     });
-    peticion.flush({ id: 9, descripcion: 'Saldo inicial', monto: 350, fecha: `${mes}-01`, tipo: 'INGRESO', categoriaId: 14, categoria: 'Saldo inicial', automatico: false });
+    peticion.flush({
+      id: 9,
+      descripcion: 'Saldo inicial',
+      monto: 350,
+      fecha: `${mes}-01`,
+      tipo: 'INGRESO',
+      categoriaId: 14,
+      categoria: 'Saldo inicial',
+      automatico: false,
+    });
     await fixture.whenStable();
 
     // Ya tiene saldo inicial: la tarjeta desaparece
@@ -115,7 +173,10 @@ describe('Inicio', () => {
     limite.dispatchEvent(new Event('input'));
     limite.closest('form')!.dispatchEvent(new Event('submit'));
 
-    const peticion = http.expectOne({ method: 'PUT', url: `${api}/presupuestos/${anio}/${numeroMes}` });
+    const peticion = http.expectOne({
+      method: 'PUT',
+      url: `${api}/presupuestos/${anio}/${numeroMes}`,
+    });
     expect(peticion.request.body).toEqual({ limiteGasto: 800, ahorroObjetivo: 0 });
     peticion.flush({ anio, mes: numeroMes, limiteGasto: 800, ahorroObjetivo: 0 });
     await fixture.whenStable();

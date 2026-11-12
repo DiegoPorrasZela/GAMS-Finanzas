@@ -18,7 +18,15 @@ describe('Exportar movimientos a CSV', () => {
   it('pone encabezados y el monto con signo (se puede sumar la columna en Excel)', () => {
     const lineas = movimientosACsv([
       base,
-      { ...base, id: 2, descripcion: 'Sueldo', monto: 1500, tipo: 'ingreso', categoria: 'Sueldo', automatico: true },
+      {
+        ...base,
+        id: 2,
+        descripcion: 'Sueldo',
+        monto: 1500,
+        tipo: 'ingreso',
+        categoria: 'Sueldo',
+        automatico: true,
+      },
     ]).split('\r\n');
 
     expect(lineas[0]).toBe(
@@ -30,7 +38,13 @@ describe('Exportar movimientos a CSV', () => {
 
   it('incluye el monto en la moneda original y distingue los ahorros', () => {
     const [, dolares, ahorro] = movimientosACsv([
-      { ...base, descripcion: 'Suscripción', monto: 34.5, monedaOriginal: 'USD', montoOriginal: 10 },
+      {
+        ...base,
+        descripcion: 'Suscripción',
+        monto: 34.5,
+        monedaOriginal: 'USD',
+        montoOriginal: 10,
+      },
       { ...base, descripcion: 'Para la laptop', categoria: 'Ahorro' },
     ]).split('\r\n');
 
@@ -39,9 +53,7 @@ describe('Exportar movimientos a CSV', () => {
   });
 
   it('protege los textos con comas, comillas o que parecen fórmulas', () => {
-    const [, fila] = movimientosACsv([
-      { ...base, descripcion: '=HYPERLINK("x")' },
-    ]).split('\r\n');
+    const [, fila] = movimientosACsv([{ ...base, descripcion: '=HYPERLINK("x")' }]).split('\r\n');
     expect(fila).toContain(`"'=HYPERLINK(""x"")"`);
 
     const [, otra] = movimientosACsv([{ ...base, descripcion: 'Pan, leche' }]).split('\r\n');

@@ -17,9 +17,36 @@ const categorias = [
   { id: 7, nombre: 'Transporte', tipo: 'GASTO' },
 ];
 const movimientos = [
-  { id: 1, descripcion: 'Pago de prácticas', monto: 1500, fecha: '2026-11-07', tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', automatico: false },
-  { id: 2, descripcion: 'Menú del almuerzo', monto: 15, fecha: '2026-11-06', tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', automatico: false },
-  { id: 3, descripcion: 'Recarga de tarjeta', monto: 30, fecha: '2026-11-05', tipo: 'GASTO', categoriaId: 7, categoria: 'Transporte', automatico: false },
+  {
+    id: 1,
+    descripcion: 'Pago de prácticas',
+    monto: 1500,
+    fecha: '2026-11-07',
+    tipo: 'INGRESO',
+    categoriaId: 1,
+    categoria: 'Sueldo',
+    automatico: false,
+  },
+  {
+    id: 2,
+    descripcion: 'Menú del almuerzo',
+    monto: 15,
+    fecha: '2026-11-06',
+    tipo: 'GASTO',
+    categoriaId: 6,
+    categoria: 'Comida',
+    automatico: false,
+  },
+  {
+    id: 3,
+    descripcion: 'Recarga de tarjeta',
+    monto: 30,
+    fecha: '2026-11-05',
+    tipo: 'GASTO',
+    categoriaId: 7,
+    categoria: 'Transporte',
+    automatico: false,
+  },
 ];
 
 describe('Movimientos', () => {
@@ -34,7 +61,11 @@ describe('Movimientos', () => {
     input.dispatchEvent(new Event('input'));
   };
   // Mensajes que se mostraron como notificaciones flotantes
-  const notificaciones = () => TestBed.inject(ToastService).toasts().map((t) => t.texto).join(' | ');
+  const notificaciones = () =>
+    TestBed.inject(ToastService)
+      .toasts()
+      .map((t) => t.texto)
+      .join(' | ');
   const enviarFormulario = () => pagina.querySelector('form')!.dispatchEvent(new Event('submit'));
   const elegirIngreso = () =>
     [...pagina.querySelectorAll<HTMLButtonElement>('[aria-label="Tipo"] button')]
@@ -66,8 +97,23 @@ describe('Movimientos', () => {
     enviarFormulario();
 
     const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
-    expect(peticion.request.body).toMatchObject({ descripcion: 'Sueldo', monto: 1200, categoriaId: 6 });
-    peticion.flush({ id: 1, descripcion: 'Sueldo', monto: 1200, tipo: 'GASTO', categoriaId: 6, categoria: 'Comida', frecuencia: 'MENSUAL', dia: 9, proximoCargo: '2099-01-09', activo: true });
+    expect(peticion.request.body).toMatchObject({
+      descripcion: 'Sueldo',
+      monto: 1200,
+      categoriaId: 6,
+    });
+    peticion.flush({
+      id: 1,
+      descripcion: 'Sueldo',
+      monto: 1200,
+      tipo: 'GASTO',
+      categoriaId: 6,
+      categoria: 'Comida',
+      frecuencia: 'MENSUAL',
+      dia: 9,
+      proximoCargo: '2099-01-09',
+      activo: true,
+    });
     // El backend ya registró el primer movimiento: la lista se vuelve a cargar
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     await fixture.whenStable();
@@ -92,8 +138,23 @@ describe('Movimientos', () => {
 
     enviarFormulario();
     const peticion = http.expectOne({ method: 'POST', url: `${api}/recurrentes` });
-    expect(peticion.request.body).toMatchObject({ descripcion: 'Sueldo quincenal', monto: 650, frecuencia: 'QUINCENAL' });
-    peticion.flush({ id: 2, descripcion: 'Sueldo quincenal', monto: 650, tipo: 'INGRESO', categoriaId: 1, categoria: 'Sueldo', frecuencia: 'QUINCENAL', dia: 15, proximoCargo: '2099-01-15', activo: true });
+    expect(peticion.request.body).toMatchObject({
+      descripcion: 'Sueldo quincenal',
+      monto: 650,
+      frecuencia: 'QUINCENAL',
+    });
+    peticion.flush({
+      id: 2,
+      descripcion: 'Sueldo quincenal',
+      monto: 650,
+      tipo: 'INGRESO',
+      categoriaId: 1,
+      categoria: 'Sueldo',
+      frecuencia: 'QUINCENAL',
+      dia: 15,
+      proximoCargo: '2099-01-15',
+      activo: true,
+    });
     http.expectOne(`${api}/movimientos`).flush(movimientos);
     await fixture.whenStable();
 
@@ -114,7 +175,9 @@ describe('Movimientos', () => {
   });
 
   it('should ask before saving an expense that leaves the balance negative', async () => {
-    const confirmar = vi.spyOn(TestBed.inject(DialogoService), 'confirmar').mockResolvedValue(false);
+    const confirmar = vi
+      .spyOn(TestBed.inject(DialogoService), 'confirmar')
+      .mockResolvedValue(false);
     escribir('descripcion', 'Laptop');
     escribir('monto', '5000');
     enviarFormulario();
@@ -147,16 +210,22 @@ describe('Movimientos', () => {
     await fixture.whenStable();
 
     expect(pagina.querySelector<HTMLInputElement>('#monto')!.value).toBe('15');
-    expect(pagina.querySelector<HTMLSelectElement>('#categoria')!.selectedOptions[0].textContent?.trim()).toBe(
-      'Comida',
-    );
+    expect(
+      pagina.querySelector<HTMLSelectElement>('#categoria')!.selectedOptions[0].textContent?.trim(),
+    ).toBe('Comida');
   });
 
   it('should copy a movement to the form with today\'s date ("Registrar de nuevo")', async () => {
-    pagina.querySelector<HTMLButtonElement>('button[aria-label="Registrar de nuevo Recarga de tarjeta"]')!.click();
+    pagina
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="Registrar de nuevo Recarga de tarjeta"]',
+      )!
+      .click();
     await fixture.whenStable();
 
-    expect(pagina.querySelector<HTMLInputElement>('#descripcion')!.value).toBe('Recarga de tarjeta');
+    expect(pagina.querySelector<HTMLInputElement>('#descripcion')!.value).toBe(
+      'Recarga de tarjeta',
+    );
     expect(pagina.querySelector<HTMLInputElement>('#monto')!.value).toBe('30');
     expect(pagina.querySelector<HTMLInputElement>('#fecha')!.value).not.toBe('2026-11-05'); // la de hoy
     expect(pagina.textContent).toContain('Nuevo movimiento'); // no es edición: se registra uno nuevo
@@ -179,7 +248,12 @@ describe('Movimientos', () => {
       categoriaId: 6,
       fecha: expect.any(String),
     });
-    peticion.flush({ ...movimientos[1], id: 4, descripcion: 'Pasaje a la universidad', monto: 3.5 });
+    peticion.flush({
+      ...movimientos[1],
+      id: 4,
+      descripcion: 'Pasaje a la universidad',
+      monto: 3.5,
+    });
     await fixture.whenStable();
 
     expect(filas().length).toBe(4);
@@ -194,7 +268,9 @@ describe('Movimientos', () => {
   });
 
   it('should edit a movement', async () => {
-    pagina.querySelector<HTMLButtonElement>('button[aria-label="Editar Menú del almuerzo"]')!.click();
+    pagina
+      .querySelector<HTMLButtonElement>('button[aria-label="Editar Menú del almuerzo"]')!
+      .click();
     await fixture.whenStable();
     expect(pagina.querySelector<HTMLInputElement>('#descripcion')!.value).toBe('Menú del almuerzo');
     expect(pagina.textContent).toContain('Editar movimiento');
@@ -213,7 +289,9 @@ describe('Movimientos', () => {
 
   it('should delete right away (without a dialog) and let the user undo it', async () => {
     const toasts = TestBed.inject(ToastService);
-    pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    pagina
+      .querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!
+      .click();
     await fixture.whenStable();
 
     expect(filas().length).toBe(2); // desaparece al instante
@@ -229,7 +307,9 @@ describe('Movimientos', () => {
   });
 
   it('should delete on the server when the undo time is over', async () => {
-    pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    pagina
+      .querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!
+      .click();
     TestBed.inject(MovimientosService).confirmarPendientes(); // como si pasaran los 5 segundos
 
     http.expectOne({ method: 'DELETE', url: `${api}/movimientos/2` }).flush(null);
@@ -240,7 +320,9 @@ describe('Movimientos', () => {
   });
 
   it('should bring the movement back if the server rejects the deletion', async () => {
-    pagina.querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!.click();
+    pagina
+      .querySelector<HTMLButtonElement>('button[aria-label="Eliminar Menú del almuerzo"]')!
+      .click();
     TestBed.inject(MovimientosService).confirmarPendientes();
 
     http
@@ -280,7 +362,11 @@ describe('Movimientos', () => {
     enviarFormulario();
     await fixture.whenStable();
     const peticion = http.expectOne({ method: 'POST', url: `${api}/movimientos` });
-    expect(peticion.request.body).toMatchObject({ monto: 34.5, monedaOriginal: 'USD', montoOriginal: 10 });
+    expect(peticion.request.body).toMatchObject({
+      monto: 34.5,
+      monedaOriginal: 'USD',
+      montoOriginal: 10,
+    });
   });
 
   it('should show the server message when saving fails', async () => {
@@ -318,7 +404,9 @@ describe('Movimientos', () => {
     await fixture.whenStable();
 
     expect(filas().length).toBe(30);
-    const verMas = [...pagina.querySelectorAll('button')].find((b) => b.textContent?.includes('Ver más'))!;
+    const verMas = [...pagina.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Ver más'),
+    )!;
     expect(verMas.textContent).toContain('5 movimientos');
     verMas.click();
     await fixture.whenStable();
