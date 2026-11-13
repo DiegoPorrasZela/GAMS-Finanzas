@@ -14,6 +14,7 @@ export class PresupuestosService {
 
   private readonly lista = signal<PresupuestoMensual[]>([]);
   readonly presupuestos = this.lista.asReadonly();
+  readonly cargando = signal(false);
   readonly error = signal<string | null>(null);
 
   constructor() {
@@ -30,10 +31,17 @@ export class PresupuestosService {
   }
 
   cargar(): void {
+    this.cargando.set(true);
     this.error.set(null);
     this.http.get<PresupuestoMensual[]>(this.api).subscribe({
-      next: (datos) => this.lista.set(datos),
-      error: (e) => this.error.set(mensajeDeError(e)),
+      next: (datos) => {
+        this.lista.set(datos);
+        this.cargando.set(false);
+      },
+      error: (e) => {
+        this.error.set(mensajeDeError(e));
+        this.cargando.set(false);
+      },
     });
   }
 

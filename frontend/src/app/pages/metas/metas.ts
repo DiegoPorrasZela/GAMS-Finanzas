@@ -54,8 +54,11 @@ export class Metas {
   protected readonly metas = this.servicio.metas;
   protected readonly cargando = this.servicio.cargando;
   // Los montos del resumen salen de los movimientos: esqueleto mientras llegan por primera vez
+  // (y de las metas: "libres" = ahorrado − lo que ya está en metas)
   protected readonly cargandoResumen = computed(
-    () => this.movimientosService.cargando() && this.movimientosService.movimientos().length === 0,
+    () =>
+      (this.movimientosService.cargando() && this.movimientosService.movimientos().length === 0) ||
+      (this.cargando() && this.metas().length === 0),
   );
   protected readonly errorCarga = computed(
     () =>

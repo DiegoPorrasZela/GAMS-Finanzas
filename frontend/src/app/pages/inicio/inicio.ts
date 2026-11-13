@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { GraficoMeses, ResumenMes } from '../../components/grafico-meses/grafico-meses';
 import { Icono } from '../../components/icono/icono';
+import { clasesDeColor } from '../../components/icono-categoria/apariencia';
 import { IconoCategoria } from '../../components/icono-categoria/icono-categoria';
 import {
   CATEGORIA_SALDO_INICIAL,
@@ -67,6 +68,18 @@ export class Inicio {
   protected readonly cargandoMetas = computed(
     () => this.metasService.cargando() && this.metasService.metas().length === 0,
   );
+  // Ya llegó la primera lista (al recargar no vuelve a false: las tarjetas no parpadean)
+  protected readonly cargado = this.movimientosService.cargado;
+  // "En ahorros" sale de los movimientos y de las metas: se espera a los dos
+  protected readonly cargandoAhorros = computed(
+    () => this.cargandoPrimeraVez() || this.cargandoMetas(),
+  );
+  // El avance del presupuesto necesita los movimientos (lo gastado) y el presupuesto
+  protected readonly cargandoPresupuesto = computed(
+    () =>
+      this.cargandoPrimeraVez() ||
+      (this.presupuestosService.cargando() && this.presupuestosService.presupuestos().length === 0),
+  );
   protected readonly error = computed(
     () =>
       this.movimientosService.error() ??
@@ -98,7 +111,7 @@ export class Inicio {
   );
   protected readonly enAhorros = computed(() => restar(this.totalesTodos().ahorro, this.enMetas()));
   protected readonly sinMovimientos = computed(
-    () => !this.cargando() && !this.error() && this.movimientosService.movimientos().length === 0,
+    () => this.cargado() && !this.error() && this.movimientosService.movimientos().length === 0,
   );
 
   // ---- Saldo inicial: el dinero con el que empieza (se registra una sola vez) ----
@@ -109,7 +122,7 @@ export class Inicio {
   private readonly saldoInicialOmitido = signal(leer(this.claveOmitido));
   protected readonly mostrarSaldoInicial = computed(
     () =>
-      !this.cargando() && !this.error() && !this.tieneSaldoInicial() && !this.saldoInicialOmitido(),
+      this.cargado() && !this.error() && !this.tieneSaldoInicial() && !this.saldoInicialOmitido(),
   );
   protected readonly guardandoSaldoInicial = signal(false);
   protected readonly errorSaldoInicial = signal<string | null>(null);
@@ -122,8 +135,9 @@ export class Inicio {
   protected readonly ddmmaaaa = ddmmaaaa;
 
   // ---- Gastos por categoría (barras ordenadas de mayor a menor) ----
-  // Las barras van en un solo color; cada categoría se reconoce por su ícono (el color sigue a la
-  // categoría, nunca a su puesto en el ranking).
+  // Cada barra lleva el color de su categoría, el mismo de su ícono (el color sigue a la categoría,
+  // nunca a su puesto en el ranking). El color es un apoyo: quien dice qué categoría es son el ícono
+  // y el nombre, porque hay colores parecidos entre sí (índigo y violeta, por ejemplo).
   protected readonly gastosPorCategoria = computed(() => {
     const totales = new Map<number, { categoria: string; monto: number }>();
     // Solo gastos de consumo: lo separado a ahorros no es un gasto
@@ -135,13 +149,17 @@ export class Inicio {
     const mayor = Math.max(0, ...[...totales.values()].map((t) => t.monto));
     return [...totales]
       .sort((a, b) => b[1].monto - a[1].monto)
-      .map(([categoriaId, { categoria, monto }]) => ({
-        categoria,
-        monto,
-        porcentaje: Math.round((monto * 100) / totalGastos),
-        ancho: (monto * 100) / mayor,
-        ...this.categoriasService.apariencia(categoriaId),
-      }));
+      .map(([categoriaId, { categoria, monto }]) => {
+        const apariencia = this.categoriasService.apariencia(categoriaId);
+        return {
+          categoria,
+          monto,
+          porcentaje: Math.round((monto * 100) / totalGastos),
+          ancho: (monto * 100) / mayor,
+          ...apariencia,
+          barra: clasesDeColor(apariencia.color).barra,
+        };
+      });
   });
 
   // ---- Ingresos y gastos de los últimos 6 meses (hasta el mes elegido) ----

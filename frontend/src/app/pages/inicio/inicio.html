@@ -92,7 +92,7 @@
 }
 
 <!-- Saldo negativo: avisar, no bloquear -->
-@if (!cargando() && saldoTotal() < 0) {
+@if (cargado() && saldoTotal() < 0) {
   <p
     role="alert"
     class="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
@@ -125,13 +125,18 @@
         S/ {{ saldoTotal() | number: '1.2-2' }}
       </p>
     }
-    <p class="mt-2 flex items-start gap-1.5 text-xs text-gray-400">
-      <app-icono nombre="alcancia" class="mt-px size-3.5" />
-      <span>
-        <span class="whitespace-nowrap">En ahorros S/ {{ enAhorros() | number: '1.2-2' }}</span> ·
-        <span class="whitespace-nowrap">En metas S/ {{ enMetas() | number: '1.2-2' }}</span>
-      </span>
-    </p>
+    <!-- Sale de los movimientos y de las metas: se muestra cuando llegaron los dos -->
+    @if (cargandoAhorros()) {
+      <p class="esqueleto mt-3 h-4 w-48 bg-gray-700!"></p>
+    } @else {
+      <p class="mt-2 flex items-start gap-1.5 text-xs text-gray-400">
+        <app-icono nombre="alcancia" class="mt-px size-3.5" />
+        <span>
+          <span class="whitespace-nowrap">En ahorros S/ {{ enAhorros() | number: '1.2-2' }}</span> ·
+          <span class="whitespace-nowrap">En metas S/ {{ enMetas() | number: '1.2-2' }}</span>
+        </span>
+      </p>
+    }
   </article>
 
   <article class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -174,7 +179,8 @@
   </a>
 </section>
 
-<div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
+<!-- grid-cols-1: en celular, una columna del ancho de la pantalla (sin esto se estira con los textos largos) -->
+<div class="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
   <div class="space-y-6 lg:col-span-2">
     <!-- Presupuesto del mes -->
     <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -308,6 +314,13 @@
             </button>
           </div>
         </form>
+      } @else if (cargandoPresupuesto()) {
+        <!-- Sin los movimientos, lo gastado saldría en S/ 0.00 ("Vas bien") por un instante -->
+        <div class="mt-5 space-y-3" aria-hidden="true">
+          <span class="esqueleto block h-4 w-1/2"></span>
+          <span class="esqueleto block h-3 w-full rounded-full"></span>
+          <span class="esqueleto block h-10 w-full"></span>
+        </div>
       } @else if (avance(); as a) {
         <!-- Gasto contra el límite -->
         <div class="mt-5">
@@ -439,7 +452,12 @@
                   </span>
                 </div>
                 <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100">
-                  <div class="h-full rounded-full bg-red-600" [style.width.%]="item.ancho"></div>
+                  <!-- La barra lleva el color de su categoría (el mismo del ícono) -->
+                  <div
+                    class="h-full rounded-full"
+                    [class]="item.barra"
+                    [style.width.%]="item.ancho"
+                  ></div>
                 </div>
               </div>
             </li>

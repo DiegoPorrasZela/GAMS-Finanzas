@@ -88,6 +88,8 @@ export class MovimientosService {
   private readonly ocultos = signal<ReadonlySet<number>>(new Set());
 
   readonly cargando = signal(false);
+  // true desde que llegó la primera lista de este usuario (al recargar sigue en true: evita parpadeos)
+  readonly cargado = signal(false);
   readonly error = signal<string | null>(null);
 
   // Siempre del más reciente al más antiguo (sin los que se están eliminando)
@@ -113,6 +115,7 @@ export class MovimientosService {
     if (usuarioId !== this.duenoDeLaLista) {
       // Cambió el usuario: no mostrar ni por un instante los datos del anterior
       this.lista.set([]);
+      this.cargado.set(false);
       this.duenoDeLaLista = usuarioId;
     }
 
@@ -121,6 +124,7 @@ export class MovimientosService {
     this.http.get<MovimientoApi[]>(this.api).subscribe({
       next: (datos) => {
         this.lista.set(datos.map(desdeApi));
+        this.cargado.set(true);
         this.cargando.set(false);
       },
       error: (e) => {
