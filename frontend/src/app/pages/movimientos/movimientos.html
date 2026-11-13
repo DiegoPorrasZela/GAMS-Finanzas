@@ -64,6 +64,13 @@
     <p class="mt-1 text-xs text-gray-400">
       {{ totales().saldo < 0 ? 'Salió más dinero del que entró' : 'Lo que entró − lo que salió' }}
     </p>
+    <!-- El saldo inicial entra al saldo pero no es un ingreso ganado: se avisa para que la cuenta cuadre
+         (Ingresos − Gastos − Ahorrado + saldo inicial = este resultado) -->
+    @if (!cargandoPrimeraVez() && totales().saldoInicial > 0) {
+      <p class="mt-1 text-xs text-gray-300">
+        Incluye tu saldo inicial (S/ {{ totales().saldoInicial | number: '1.2-2' }})
+      </p>
+    }
   </article>
 </section>
 

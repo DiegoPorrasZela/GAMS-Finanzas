@@ -50,4 +50,14 @@ describe('Cuentas de dinero en céntimos', () => {
     ]);
     expect(ahorro).toBe(30.3);
   });
+
+  it('calcularTotales: el saldo inicial entra al saldo, pero no cuenta como ingreso', () => {
+    const { ingresos, saldoInicial, saldo } = calcularTotales([
+      movimiento(12, 'ingreso', 'Saldo inicial'),
+      movimiento(1500, 'ingreso', 'Sueldo'),
+    ]);
+    expect(ingresos).toBe(1500); // solo lo ganado
+    expect(saldoInicial).toBe(12);
+    expect(saldo).toBe(1512); // todo lo que entró
+  });
 });

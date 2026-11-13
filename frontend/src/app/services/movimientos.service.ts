@@ -34,12 +34,14 @@ export const SEGUNDOS_PARA_DESHACER = 5;
 // - ingresos: lo ganado (sin saldo inicial ni retiros de ahorros)
 // - gastos: lo consumido (sin lo que se separó a ahorros)
 // - ahorro: lo separado a ahorros menos lo retirado
+// - saldoInicial: el dinero con el que empezó (entra al saldo, pero no es un ingreso ganado)
 // - saldo: cómo cambió el dinero disponible (todo lo que entró menos todo lo que salió)
 // Se suma en céntimos (enteros) para que los decimales no se desvíen (ver utils/dinero.ts).
 export function calcularTotales(lista: Movimiento[]) {
   let ingresos = 0;
   let gastos = 0;
   let ahorro = 0;
+  let saldoInicial = 0;
   let saldo = 0;
   for (const m of lista) {
     const centimos = aCentimos(m.monto);
@@ -57,12 +59,16 @@ export function calcularTotales(lista: Movimiento[]) {
       case 'retiro':
         ahorro -= centimos;
         break;
+      case 'saldoInicial':
+        saldoInicial += centimos;
+        break;
     }
   }
   return {
     ingresos: deCentimos(ingresos),
     gastos: deCentimos(gastos),
     ahorro: deCentimos(ahorro),
+    saldoInicial: deCentimos(saldoInicial),
     saldo: deCentimos(saldo),
   };
 }
